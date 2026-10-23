@@ -4,7 +4,7 @@
 
 A C++17 project for building a simulated ECU diagnostic server using DoIP (ISO 13400-2) and UDS (ISO 14229-1), with Raspberry Pi as a target platform.
 
-> **Current status:** project scaffold (Milestone 1). The server currently prints its version; DoIP networking and UDS services are not implemented yet.
+> **Current status:** M2, DoIP generic-header codec. The server still only prints its version; DoIP networking and UDS services are not implemented yet.
 
 ## Project layout
 
@@ -60,7 +60,7 @@ ctest --test-dir build/debug --output-on-failure
 4. With `DOIP_BUILD_TESTS=ON` (the default), it finds or downloads GoogleTest, creates `unit_tests` from `tests/unit/`, and registers the tests with CTest.
 5. Ninja executes the generated compile and link steps. CTest runs the registered tests.
 
-The key current interfaces are `doip_uds::version()` in `include/doip_uds/version.hpp`, its implementation in `src/version.cpp`, and the executable `main()` in `apps/doip_server/main.cpp`. These are scaffold-level interfaces; no network listener, protocol codec, or UDS dispatcher exists yet.
+The core library currently exposes `doip_uds::version()` and the DoIP generic-header codec (`DoipHeader`, `encode_doip_header()`, and `decode_doip_header()`) under `include/doip_uds/`. The codec handles the 8-byte header representation and checks the version/inverse pair; it does not parse payloads, enforce payload-type rules, or handle network I/O. The executable entry point is `main()` in `apps/doip_server/main.cpp`; it does not start a listener yet.
 
 ## Development direction
 
@@ -69,7 +69,7 @@ Implement protocol logic in the core library, keeping the executable entry point
 ## Roadmap
 
 - [x] M1 Project setup, CI
-- [ ] M2 DoIP header codec
+- [x] M2 DoIP header codec
 - [ ] M3 UDP vehicle identification
 - [ ] M4 TCP routing activation and diagnostic messages
 - [ ] M5 UDS dispatcher, 0x10 / 0x3E / 0x11
