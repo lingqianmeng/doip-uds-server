@@ -35,6 +35,7 @@ endif()
 
 # Core library: DoIP + UDS logic (filled from milestone 2 on)
 add_library(doip_uds_core
+  src/doip_header.cpp
   src/version.cpp
 )
 target_include_directories(doip_uds_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

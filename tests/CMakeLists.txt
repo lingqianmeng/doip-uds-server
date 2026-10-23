@@ -5,6 +5,7 @@ endif()
 include(GoogleTest)
 
 add_executable(unit_tests
+  unit/test_doip_header.cpp
   unit/test_version.cpp
 )
 target_link_libraries(unit_tests PRIVATE doip_uds_core project_warnings GTest::gtest GTest::gtest_main)
