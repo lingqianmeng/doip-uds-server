@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include "doip_uds/doip_header.hpp"
+#include "doip_uds/vehicle_identification.hpp"
 
 TEST(DoipHeader, EncodesFieldsInNetworkByteOrder) {
     const doip_uds::DoipHeader header{0x02, 0x8001, 0x12345678};
@@ -12,6 +13,19 @@ TEST(DoipHeader, EncodesFieldsInNetworkByteOrder) {
 
     const std::array<std::uint8_t, doip_uds::kDoipGenericHeaderSize> expected{
         0x02, 0xFD, 0x80, 0x01, 0x12, 0x34, 0x56, 0x78};
+    EXPECT_EQ(encoded, expected);
+}
+
+TEST(DoipHeader, EncodesDefaultVersionForVehicleIdentificationRequests) {
+    const doip_uds::DoipHeader header{
+        doip_uds::kDoipDefaultProtocolVersionForVehicleIdentificationRequest,
+        doip_uds::kDoipPayloadTypeVehicleIdentificationRequest,
+        0};
+
+    const auto encoded = doip_uds::encode_doip_header(header);
+
+    const std::array<std::uint8_t, doip_uds::kDoipGenericHeaderSize> expected{
+        0xFF, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00};
     EXPECT_EQ(encoded, expected);
 }
 

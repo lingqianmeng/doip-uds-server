@@ -26,7 +26,7 @@ TEST(VehicleIdentificationRequest, EncodesAndDecodesVinTargetedRequest) {
     const auto decoded = doip_uds::decode_vehicle_identification_request(
         encoded.payload_type, encoded.payload.data(), encoded.payload.size());
 
-    EXPECT_EQ(encoded.payload_type, doip_uds::kDoipPayloadTypeVehicleIdentificationRequestByVin);
+    EXPECT_EQ(encoded.payload_type, 0x0003);
     ASSERT_TRUE(decoded.has_value());
     ASSERT_TRUE(std::holds_alternative<doip_uds::VehicleIdentificationRequestByVin>(*decoded));
     EXPECT_EQ(std::get<doip_uds::VehicleIdentificationRequestByVin>(*decoded).vin, vin);
@@ -42,7 +42,7 @@ TEST(VehicleIdentificationRequest, EncodesAndDecodesEidTargetedRequest) {
     const auto decoded = doip_uds::decode_vehicle_identification_request(
         encoded.payload_type, encoded.payload.data(), encoded.payload.size());
 
-    EXPECT_EQ(encoded.payload_type, doip_uds::kDoipPayloadTypeVehicleIdentificationRequestByEid);
+    EXPECT_EQ(encoded.payload_type, 0x0002);
     ASSERT_TRUE(decoded.has_value());
     ASSERT_TRUE(std::holds_alternative<doip_uds::VehicleIdentificationRequestByEid>(*decoded));
     EXPECT_EQ(std::get<doip_uds::VehicleIdentificationRequestByEid>(*decoded).eid, eid);
@@ -78,28 +78,28 @@ TEST(VehicleIdentificationRequest, RejectsUnknownTypeAndInvalidPayloadSizes) {
 TEST(VehicleIdentificationResponse, EncodesFieldsInNetworkByteOrder) {
     const doip_uds::VehicleIdentificationResponse response{
         {'W', 'V', 'W', 'Z', 'Z', 'Z', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1'},
-        0x0E80,
+        0x1001,
         {0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
         {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF},
-        0x10,
+        0x00,
         0x00};
 
     const auto encoded = doip_uds::encode_vehicle_identification_response(response);
 
     const std::array<std::uint8_t, doip_uds::kDoipVehicleIdentificationResponsePayloadSize> expected{
         'W', 'V', 'W', 'Z', 'Z', 'Z', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1',
-        0x0E, 0x80, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55,
-        0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x10, 0x00};
+        0x10, 0x01, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55,
+        0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00, 0x00};
     EXPECT_EQ(encoded, expected);
 }
 
 TEST(VehicleIdentificationResponse, DecodesAndRoundTripsAllFields) {
     const doip_uds::VehicleIdentificationResponse response{
         {'W', 'V', 'W', 'Z', 'Z', 'Z', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1'},
-        0x0E80,
+        0x1001,
         {0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
         {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF},
-        0x10,
+        0x00,
         0x00};
     const auto encoded = doip_uds::encode_vehicle_identification_response(response);
 

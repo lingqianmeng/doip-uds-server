@@ -4,7 +4,7 @@
 
 A C++17 project for building a simulated ECU diagnostic server using DoIP (ISO 13400-2) and UDS (ISO 14229-1), with Raspberry Pi as a target platform.
 
-> **Current status:** M2 complete; M3.1 vehicle-identification payload codec in progress. UDP discovery and UDS services are not implemented yet.
+> **Current status:** M2 complete; M3.1 vehicle-identification payload codec cross-checked against ISO 13400-2:2012(E). UDP discovery and UDS services are not implemented yet.
 
 ## Project layout
 
@@ -60,7 +60,7 @@ ctest --test-dir build/debug --output-on-failure
 4. With `DOIP_BUILD_TESTS=ON` (the default), it finds or downloads GoogleTest, creates `unit_tests` from `tests/unit/`, and registers the tests with CTest.
 5. Ninja executes the generated compile and link steps. CTest runs the registered tests.
 
-The core library currently exposes `doip_uds::version()`, the DoIP generic-header codec (`DoipHeader`, `encode_doip_header()`, and `decode_doip_header()`), and vehicle-identification request/response payload codecs under `include/doip_uds/`. These codecs do not handle network I/O. The executable entry point is `main()` in `apps/doip_server/main.cpp`; it does not start a listener yet.
+The core library currently exposes `doip_uds::version()`, the DoIP generic-header codec (`DoipHeader`, `encode_doip_header()`, and `decode_doip_header()`), and vehicle-identification request/response payload codecs under `include/doip_uds/`. These codecs do not handle network I/O. The executable entry point is `main()` in `apps/doip_server/main.cpp`; it does not start a listener yet. The M3.1 payload type assignments and field layouts are cross-checked against the project's local reference copy of ISO 13400-2:2012(E); this does not imply conformance to later editions or complete protocol conformance.
 
 ## Development direction
 

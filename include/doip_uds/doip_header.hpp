@@ -9,6 +9,7 @@ namespace doip_uds {
 
 inline constexpr std::size_t kDoipGenericHeaderSize = 8;
 inline constexpr std::uint8_t kDoipProtocolVersion = 0x02;
+inline constexpr std::uint8_t kDoipDefaultProtocolVersionForVehicleIdentificationRequest = 0xFF;
 
 struct DoipHeader {
     std::uint8_t protocol_version{kDoipProtocolVersion};
