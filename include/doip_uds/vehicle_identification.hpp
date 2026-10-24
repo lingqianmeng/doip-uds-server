@@ -10,8 +10,8 @@
 namespace doip_uds {
 
 inline constexpr std::uint16_t kDoipPayloadTypeVehicleIdentificationRequest = 0x0001;
-inline constexpr std::uint16_t kDoipPayloadTypeVehicleIdentificationRequestByVin = 0x0002;
-inline constexpr std::uint16_t kDoipPayloadTypeVehicleIdentificationRequestByEid = 0x0003;
+inline constexpr std::uint16_t kDoipPayloadTypeVehicleIdentificationRequestByEid = 0x0002;
+inline constexpr std::uint16_t kDoipPayloadTypeVehicleIdentificationRequestByVin = 0x0003;
 inline constexpr std::uint16_t kDoipPayloadTypeVehicleIdentificationResponse = 0x0004;
 
 inline constexpr std::size_t kDoipVinSize = 17;

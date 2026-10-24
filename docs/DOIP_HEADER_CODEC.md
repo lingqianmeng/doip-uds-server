@@ -27,6 +27,13 @@ The generic header identifies the payload type and its length:
 Multi-byte values use **network byte order** (big-endian): the most significant
 byte comes first.
 
+For vehicle-identification request messages, ISO 13400-2:2012(E) Table 11
+defines `0xFF` as the default protocol-version byte, with inverse `0x00`.
+This request-specific default allows discovery before the sender knows which
+DoIP protocol version a responding entity uses. The normal M2 default in
+`DoipHeader` remains `0x02`; code constructing an identification request must
+select the dedicated request-default value explicitly.
+
 For example, the encoder test produces this header:
 
 ```text
@@ -86,5 +93,5 @@ length to assemble and parse complete messages.
 
 The codec provides the first step for interpreting a DoIP message. Later work
 can use the decoded payload type to select message handling and the length to
-read the corresponding payload. UDP vehicle identification is planned for M3;
-TCP transport and diagnostic-message handling are planned for M4.
+read the corresponding payload. M3 adds UDP vehicle identification; TCP
+transport and diagnostic-message handling are planned for M4.
