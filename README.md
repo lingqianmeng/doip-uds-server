@@ -4,7 +4,7 @@
 
 A C++17 project for building a simulated ECU diagnostic server using DoIP (ISO 13400-2) and UDS (ISO 14229-1), with Raspberry Pi as a target platform.
 
-> **Current status:** M2, DoIP generic-header codec. The server still only prints its version; DoIP networking and UDS services are not implemented yet.
+> **Current status:** M2 complete, M3 planned. The server still only prints its version; UDP discovery and UDS services are not implemented yet.
 
 ## Project layout
 
@@ -71,6 +71,11 @@ Implement protocol logic in the core library, keeping the executable entry point
 - [x] M1 Project setup, CI
 - [x] M2 DoIP header codec
 - [ ] M3 UDP vehicle identification
+  - [ ] M3.1 Vehicle-identification payloads: define request/response types and encode/decode the standard payload fields, with unit tests.
+  - [ ] M3.2 ECU identity configuration: load and validate VIN, logical address, EID, and GID from `config/ecu_config.json`.
+  - [ ] M3.3 UDP transport: add a cross-platform socket listener on the DoIP UDP port (13400), with explicit startup errors and orderly shutdown.
+  - [ ] M3.4 Request handling: answer broadcast vehicle-identification requests and matching EID/VIN-targeted requests using the configured ECU identity; ignore malformed or non-matching requests safely.
+  - [ ] M3.5 Integration and usage: verify request/response behavior over localhost, document how to run and test discovery, and keep CI passing.
 - [ ] M4 TCP routing activation and diagnostic messages
 - [ ] M5 UDS dispatcher, 0x10 / 0x3E / 0x11
 - [ ] M6 0x22 / 0x2E
@@ -78,3 +83,8 @@ Implement protocol logic in the core library, keeping the executable entry point
 - [ ] M8 0x27 SecurityAccess
 - [ ] M9 Python tester and integration tests
 - [ ] M10 Docker, CodeQL, Trivy
+
+M3 is intentionally split into independently testable steps: first implement
+the wire-format and identity data, then add UDP I/O, and finally connect the
+pieces with an end-to-end test. This keeps protocol encoding and request
+matching testable without a live socket while transport behavior is developed.
