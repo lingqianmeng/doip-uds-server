@@ -4,7 +4,7 @@
 
 A C++17 project for building a simulated ECU diagnostic server using DoIP (ISO 13400-2) and UDS (ISO 14229-1), with Raspberry Pi as a target platform.
 
-> **Current status:** M2 complete, M3 planned. The server still only prints its version; UDP discovery and UDS services are not implemented yet.
+> **Current status:** M2 complete; M3.1 vehicle-identification payload codec in progress. UDP discovery and UDS services are not implemented yet.
 
 ## Project layout
 
@@ -60,7 +60,7 @@ ctest --test-dir build/debug --output-on-failure
 4. With `DOIP_BUILD_TESTS=ON` (the default), it finds or downloads GoogleTest, creates `unit_tests` from `tests/unit/`, and registers the tests with CTest.
 5. Ninja executes the generated compile and link steps. CTest runs the registered tests.
 
-The core library currently exposes `doip_uds::version()` and the DoIP generic-header codec (`DoipHeader`, `encode_doip_header()`, and `decode_doip_header()`) under `include/doip_uds/`. The codec handles the 8-byte header representation and checks the version/inverse pair; it does not parse payloads, enforce payload-type rules, or handle network I/O. The executable entry point is `main()` in `apps/doip_server/main.cpp`; it does not start a listener yet.
+The core library currently exposes `doip_uds::version()`, the DoIP generic-header codec (`DoipHeader`, `encode_doip_header()`, and `decode_doip_header()`), and vehicle-identification request/response payload codecs under `include/doip_uds/`. These codecs do not handle network I/O. The executable entry point is `main()` in `apps/doip_server/main.cpp`; it does not start a listener yet.
 
 ## Development direction
 
@@ -71,11 +71,11 @@ Implement protocol logic in the core library, keeping the executable entry point
 - [x] M1 Project setup, CI
 - [x] M2 DoIP header codec
 - [ ] M3 UDP vehicle identification
-  - [ ] M3.1 Vehicle-identification payloads: define request/response types and encode/decode the standard payload fields, with unit tests.
-  - [ ] M3.2 ECU identity configuration: load and validate VIN, logical address, EID, and GID from `config/ecu_config.json`.
-  - [ ] M3.3 UDP transport: add a cross-platform socket listener on the DoIP UDP port (13400), with explicit startup errors and orderly shutdown.
-  - [ ] M3.4 Request handling: answer broadcast vehicle-identification requests and matching EID/VIN-targeted requests using the configured ECU identity; ignore malformed or non-matching requests safely.
-  - [ ] M3.5 Integration and usage: verify request/response behavior over localhost, document how to run and test discovery, and keep CI passing.
+  - [x] **M3.1 — Payload codec:** represent broadcast, VIN-targeted, and EID-targeted identification requests and the identification response; encode/decode their payload bytes. **Done when:** field order, byte order, payload types, and exact sizes are covered by unit tests.
+  - [ ] **M3.2 — ECU identity configuration:** load the ECU's VIN, logical address, EID, and GID from `config/ecu_config.json`. **Done when:** valid configuration produces a typed identity and invalid/missing fields produce a clear startup error; validation has unit tests.
+  - [ ] **M3.3 — UDP transport:** create a cross-platform UDP listener on the DoIP port (13400), separate from protocol handling. **Done when:** it can bind, receive datagrams, report bind/receive errors, and shut down cleanly; transport behavior has tests where practical.
+  - [ ] **M3.4 — Request handling:** connect datagrams, generic-header parsing, M3.1 payload decoding, and the configured identity. **Done when:** valid broadcast and matching VIN/EID requests produce a correctly framed vehicle-identification response, while malformed or non-matching requests do not produce a response.
+  - [ ] **M3.5 — Integration and usage:** demonstrate the server and a client exchanging identification messages over localhost. **Done when:** an automated integration test verifies the UDP request/response and README instructions explain configuration, startup, and a discovery check.
 - [ ] M4 TCP routing activation and diagnostic messages
 - [ ] M5 UDS dispatcher, 0x10 / 0x3E / 0x11
 - [ ] M6 0x22 / 0x2E
@@ -84,7 +84,9 @@ Implement protocol logic in the core library, keeping the executable entry point
 - [ ] M9 Python tester and integration tests
 - [ ] M10 Docker, CodeQL, Trivy
 
-M3 is intentionally split into independently testable steps: first implement
-the wire-format and identity data, then add UDP I/O, and finally connect the
-pieces with an end-to-end test. This keeps protocol encoding and request
-matching testable without a live socket while transport behavior is developed.
+M3's goal is limited to discovering the simulated ECU over UDP and returning
+its configured identity. It does not include TCP diagnostic connections or
+UDS services; those are later milestones. Complete each M3 sub-milestone in
+its own feature branch and PR. The sequence keeps payload/configuration logic
+independently testable before socket I/O is added, then verifies the assembled
+behavior end to end.
