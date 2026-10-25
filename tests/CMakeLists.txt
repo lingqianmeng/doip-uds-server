@@ -6,6 +6,7 @@ include(GoogleTest)
 
 add_executable(unit_tests
   unit/test_doip_header.cpp
+  unit/test_ecu_identity.cpp
   unit/test_vehicle_identification.cpp
   unit/test_version.cpp
 )

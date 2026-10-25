@@ -4,7 +4,7 @@
 
 A C++17 project for building a simulated ECU diagnostic server using DoIP (ISO 13400-2) and UDS (ISO 14229-1), with Raspberry Pi as a target platform.
 
-> **Current status:** M2 complete; M3.1 vehicle-identification payload codec cross-checked against ISO 13400-2:2012(E). UDP discovery and UDS services are not implemented yet.
+> **Current status:** M2 complete; M3.1 vehicle-identification payload codec cross-checked against ISO 13400-2:2012(E); M3.2 ECU identity configuration implemented. UDP discovery and UDS services are not implemented yet.
 
 ## Project layout
 
@@ -22,7 +22,7 @@ CMakePresets.json       Debug/release Ninja build presets
 
 Requirements: CMake 3.21 or newer, Ninja, and a C++17-capable compiler. CMake selects the compiler available in the environment; the presets do not force GCC, MSVC, or a vcpkg triplet.
 
-GoogleTest is used for unit tests. CMake uses an installed package if available; otherwise it downloads GoogleTest with `FetchContent` during configuration. The fallback therefore requires network access on the first configure. **vcpkg is not used** by the current build.
+GoogleTest is used for unit tests, and `nlohmann/json` parses ECU configuration. CMake uses installed packages if available; otherwise it downloads the dependencies with `FetchContent` during configuration. The fallback therefore requires network access on the first configure. **vcpkg is not used** by the current build.
 
 From the repository root:
 
@@ -60,7 +60,7 @@ ctest --test-dir build/debug --output-on-failure
 4. With `DOIP_BUILD_TESTS=ON` (the default), it finds or downloads GoogleTest, creates `unit_tests` from `tests/unit/`, and registers the tests with CTest.
 5. Ninja executes the generated compile and link steps. CTest runs the registered tests.
 
-The core library currently exposes `doip_uds::version()`, the DoIP generic-header codec (`DoipHeader`, `encode_doip_header()`, and `decode_doip_header()`), and vehicle-identification request/response payload codecs under `include/doip_uds/`. These codecs do not handle network I/O. The executable entry point is `main()` in `apps/doip_server/main.cpp`; it does not start a listener yet. The M3.1 payload type assignments and field layouts are cross-checked against the project's local reference copy of ISO 13400-2:2012(E); this does not imply conformance to later editions or complete protocol conformance.
+The core library currently exposes `doip_uds::version()`, the DoIP generic-header codec (`DoipHeader`, `encode_doip_header()`, and `decode_doip_header()`), vehicle-identification request/response payload codecs, and the ECU identity configuration loader under `include/doip_uds/`. These components do not handle network I/O. The executable entry point loads and validates `config/ecu_config.json` (or an optional path argument), but does not start a listener yet. M3.1 and M3.2 standards-specific checks are based on the project's local reference copy of ISO 13400-2:2012(E); this does not imply conformance to later editions or complete protocol conformance. See [`docs/ECU_IDENTITY_CONFIGURATION.md`](docs/ECU_IDENTITY_CONFIGURATION.md) for the configuration format and validation rules.
 
 ## Development direction
 
@@ -72,7 +72,7 @@ Implement protocol logic in the core library, keeping the executable entry point
 - [x] M2 DoIP header codec
 - [ ] M3 UDP vehicle identification
   - [x] **M3.1 — Payload codec:** represent broadcast, VIN-targeted, and EID-targeted identification requests and the identification response; encode/decode their payload bytes. **Done when:** field order, byte order, payload types, and exact sizes are covered by unit tests.
-  - [ ] **M3.2 — ECU identity configuration:** load the ECU's VIN, logical address, EID, and GID from `config/ecu_config.json`. **Done when:** valid configuration produces a typed identity and invalid/missing fields produce a clear startup error; validation has unit tests.
+  - [x] **M3.2 — ECU identity configuration:** load the ECU's VIN, logical address, EID, and GID from `config/ecu_config.json`. **Done when:** valid configuration produces a typed identity and invalid/missing fields produce a clear startup error; validation has unit tests.
   - [ ] **M3.3 — UDP transport:** create a cross-platform UDP listener on the DoIP port (13400), separate from protocol handling. **Done when:** it can bind, receive datagrams, report bind/receive errors, and shut down cleanly; transport behavior has tests where practical.
   - [ ] **M3.4 — Request handling:** connect datagrams, generic-header parsing, M3.1 payload decoding, and the configured identity. **Done when:** valid broadcast and matching VIN/EID requests produce a correctly framed vehicle-identification response, while malformed or non-matching requests do not produce a response.
   - [ ] **M3.5 — Integration and usage:** demonstrate the server and a client exchanging identification messages over localhost. **Done when:** an automated integration test verifies the UDP request/response and README instructions explain configuration, startup, and a discovery check.

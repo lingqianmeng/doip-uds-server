@@ -33,14 +33,24 @@ if(DOIP_BUILD_TESTS)
   endif()
 endif()
 
+find_package(nlohmann_json 3.11 CONFIG QUIET)
+if(NOT nlohmann_json_FOUND)
+  FetchContent_Declare(
+    nlohmann_json
+    URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+  )
+  FetchContent_MakeAvailable(nlohmann_json)
+endif()
+
 # Core library: DoIP + UDS logic (filled from milestone 2 on)
 add_library(doip_uds_core
   src/doip_header.cpp
+  src/ecu_identity.cpp
   src/vehicle_identification.cpp
   src/version.cpp
 )
 target_include_directories(doip_uds_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(doip_uds_core PRIVATE project_warnings)
+target_link_libraries(doip_uds_core PRIVATE project_warnings nlohmann_json::nlohmann_json)
 
 # Server executable
 add_executable(doip_server apps/doip_server/main.cpp)
