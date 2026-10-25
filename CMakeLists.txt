@@ -46,11 +46,15 @@ endif()
 add_library(doip_uds_core
   src/doip_header.cpp
   src/ecu_identity.cpp
+  src/udp_transport.cpp
   src/vehicle_identification.cpp
   src/version.cpp
 )
 target_include_directories(doip_uds_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(doip_uds_core PRIVATE project_warnings nlohmann_json::nlohmann_json)
+if(WIN32)
+  target_link_libraries(doip_uds_core PRIVATE ws2_32)
+endif()
 
 # Server executable
 add_executable(doip_server apps/doip_server/main.cpp)
