@@ -4,13 +4,13 @@
 
 A C++17 project for building a simulated ECU diagnostic server using DoIP (ISO 13400-2) and UDS (ISO 14229-1), with Raspberry Pi as a target platform.
 
-> **Current status:** M2 complete; M3.1 vehicle-identification payload codec cross-checked against ISO 13400-2:2012(E); M3.2 ECU identity configuration implemented. UDP discovery and UDS services are not implemented yet.
+> **Current status:** M2 complete; M3.1 vehicle-identification payload codec cross-checked against ISO 13400-2:2012(E); M3.2 ECU identity configuration and M3.3 UDP transport implemented. UDP discovery handling and UDS services are not implemented yet.
 
 ## Project layout
 
 ```text
 apps/doip_server/       Executable entry point
-config/                 ECU configuration example (not yet loaded by the server)
+config/                 ECU configuration example
 include/doip_uds/       Public headers
 src/                    Core library implementation
 tests/unit/             GoogleTest unit tests
@@ -60,7 +60,7 @@ ctest --test-dir build/debug --output-on-failure
 4. With `DOIP_BUILD_TESTS=ON` (the default), it finds or downloads GoogleTest, creates `unit_tests` from `tests/unit/`, and registers the tests with CTest.
 5. Ninja executes the generated compile and link steps. CTest runs the registered tests.
 
-The core library currently exposes `doip_uds::version()`, the DoIP generic-header codec (`DoipHeader`, `encode_doip_header()`, and `decode_doip_header()`), vehicle-identification request/response payload codecs, and the ECU identity configuration loader under `include/doip_uds/`. These components do not handle network I/O. The executable entry point loads and validates `config/ecu_config.json` (or an optional path argument), but does not start a listener yet. M3.1 and M3.2 standards-specific checks are based on the project's local reference copy of ISO 13400-2:2012(E); this does not imply conformance to later editions or complete protocol conformance. See [`docs/ECU_IDENTITY_CONFIGURATION.md`](docs/ECU_IDENTITY_CONFIGURATION.md) for the configuration format and validation rules.
+The core library currently exposes `doip_uds::version()`, the DoIP generic-header codec (`DoipHeader`, `encode_doip_header()`, and `decode_doip_header()`), vehicle-identification payload codecs, ECU identity configuration loading, and the IPv4 UDP listener. The executable loads and validates `config/ecu_config.json` (or an optional path argument), but does not start the UDP listener yet. M3.1 and M3.2 standards-specific checks are based on the project's local reference copy of ISO 13400-2:2012(E); this does not imply conformance to later editions or complete protocol conformance. See [`docs/ECU_IDENTITY_CONFIGURATION.md`](docs/ECU_IDENTITY_CONFIGURATION.md) for configuration rules and [`docs/UDP_TRANSPORT.md`](docs/UDP_TRANSPORT.md) for transport behavior.
 
 ## Development direction
 
@@ -73,7 +73,7 @@ Implement protocol logic in the core library, keeping the executable entry point
 - [ ] M3 UDP vehicle identification
   - [x] **M3.1 — Payload codec:** represent broadcast, VIN-targeted, and EID-targeted identification requests and the identification response; encode/decode their payload bytes. **Done when:** field order, byte order, payload types, and exact sizes are covered by unit tests.
   - [x] **M3.2 — ECU identity configuration:** load the ECU's VIN, logical address, EID, and GID from `config/ecu_config.json`. **Done when:** valid configuration produces a typed identity and invalid/missing fields produce a clear startup error; validation has unit tests.
-  - [ ] **M3.3 — UDP transport:** create a cross-platform UDP listener on the DoIP port (13400), separate from protocol handling. **Done when:** it can bind, receive datagrams, report bind/receive errors, and shut down cleanly; transport behavior has tests where practical.
+  - [x] **M3.3 — UDP transport:** create a cross-platform UDP listener on the DoIP port (13400), separate from protocol handling. **Done when:** it can bind, receive datagrams, report bind/receive errors, and shut down cleanly; transport behavior has tests where practical.
   - [ ] **M3.4 — Request handling:** connect datagrams, generic-header parsing, M3.1 payload decoding, and the configured identity. **Done when:** valid broadcast and matching VIN/EID requests produce a correctly framed vehicle-identification response, while malformed or non-matching requests do not produce a response.
   - [ ] **M3.5 — Integration and usage:** demonstrate the server and a client exchanging identification messages over localhost. **Done when:** an automated integration test verifies the UDP request/response and README instructions explain configuration, startup, and a discovery check.
 - [ ] M4 TCP routing activation and diagnostic messages

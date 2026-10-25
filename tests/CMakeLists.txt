@@ -3,12 +3,14 @@ if(NOT TARGET GTest::gtest)
 endif()
 
 include(GoogleTest)
+find_package(Threads REQUIRED)
 
 add_executable(unit_tests
   unit/test_doip_header.cpp
   unit/test_ecu_identity.cpp
+  unit/test_udp_transport.cpp
   unit/test_vehicle_identification.cpp
   unit/test_version.cpp
 )
-target_link_libraries(unit_tests PRIVATE doip_uds_core project_warnings GTest::gtest GTest::gtest_main)
+target_link_libraries(unit_tests PRIVATE doip_uds_core project_warnings GTest::gtest GTest::gtest_main Threads::Threads)
 gtest_discover_tests(unit_tests)
