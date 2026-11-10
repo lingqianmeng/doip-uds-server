@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -30,6 +31,15 @@ public:
     /// Receives one IPv4 UDP datagram. Returns nullopt after shutdown().
     /// Socket failures throw std::system_error.
     std::optional<UdpDatagram> receive();
+
+    /// Waits up to timeout for one datagram. Returns nullopt on timeout or shutdown().
+    std::optional<UdpDatagram> receive_for(std::chrono::milliseconds timeout);
+
+    /// Sends one complete IPv4 UDP datagram to the specified peer.
+    /// Invalid addresses throw std::invalid_argument; socket failures throw std::system_error.
+    void send_to(const std::string& address,
+                 std::uint16_t port,
+                 const std::vector<std::uint8_t>& payload);
 
     /// Requests shutdown; a blocked receive returns within approximately 100 ms.
     void shutdown() noexcept;

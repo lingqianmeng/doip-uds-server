@@ -15,3 +15,9 @@ add_executable(unit_tests
 )
 target_link_libraries(unit_tests PRIVATE doip_uds_core project_warnings GTest::gtest GTest::gtest_main Threads::Threads)
 gtest_discover_tests(unit_tests)
+
+add_executable(integration_tests
+  integration/test_vehicle_identification_udp.cpp
+)
+target_link_libraries(integration_tests PRIVATE doip_uds_core project_warnings GTest::gtest GTest::gtest_main Threads::Threads)
+gtest_discover_tests(integration_tests)

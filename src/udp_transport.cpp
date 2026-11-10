@@ -1,9 +1,11 @@
 #include "doip_uds/udp_transport.hpp"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <stdexcept>
 #include <system_error>
 #include <utility>
@@ -116,15 +118,26 @@ struct UdpListener::Impl {
         bound_port = ntohs(local_address.sin_port);
     }
 
-    std::optional<UdpDatagram> receive() {
+    std::optional<UdpDatagram> receive(std::optional<std::chrono::milliseconds> timeout_duration) {
         std::vector<std::uint8_t> payload(kMaximumUdpPayloadSize);
+        const auto deadline = timeout_duration
+                                  ? std::optional(std::chrono::steady_clock::now() +
+                                                  *timeout_duration)
+                                  : std::nullopt;
         while (!stopped.load()) {
             fd_set read_set;
             FD_ZERO(&read_set);
             FD_SET(socket, &read_set);
             timeval timeout{};
-            timeout.tv_sec = static_cast<long>(kReceivePollInterval.count() / 1000);
-            timeout.tv_usec = static_cast<long>((kReceivePollInterval.count() % 1000) * 1000);
+            auto wait_duration = kReceivePollInterval;
+            if (deadline) {
+                const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    *deadline - std::chrono::steady_clock::now());
+                wait_duration = std::max(std::chrono::milliseconds::zero(),
+                                          std::min(wait_duration, remaining));
+            }
+            timeout.tv_sec = static_cast<long>(wait_duration.count() / 1000);
+            timeout.tv_usec = static_cast<long>((wait_duration.count() % 1000) * 1000);
 
 #ifdef _WIN32
             const int ready = select(0, &read_set, nullptr, nullptr, &timeout);
@@ -132,6 +145,9 @@ struct UdpListener::Impl {
             const int ready = select(socket + 1, &read_set, nullptr, nullptr, &timeout);
 #endif
             if (ready == 0) {
+                if (deadline && std::chrono::steady_clock::now() >= *deadline) {
+                    return std::nullopt;
+                }
                 continue;
             }
             if (ready < 0) {
@@ -184,6 +200,40 @@ struct UdpListener::Impl {
         }
         return std::nullopt;
     }
+
+    void send_to(const std::string& destination_address,
+                 std::uint16_t destination_port,
+                 const std::vector<std::uint8_t>& payload) {
+        if (payload.size() > kMaximumUdpPayloadSize) {
+            throw std::invalid_argument("UDP payload exceeds the maximum IPv4 datagram size");
+        }
+
+        sockaddr_in destination{};
+        destination.sin_family = AF_INET;
+        destination.sin_port = htons(destination_port);
+        if (inet_pton(AF_INET, destination_address.c_str(), &destination.sin_addr) != 1) {
+            throw std::invalid_argument("destination address must be a valid IPv4 address");
+        }
+
+#ifdef _WIN32
+        const int sent = ::sendto(socket,
+                                  reinterpret_cast<const char*>(payload.data()),
+                                  static_cast<int>(payload.size()),
+                                  0,
+                                  reinterpret_cast<const sockaddr*>(&destination),
+                                  sizeof(destination));
+#else
+        const auto sent = ::sendto(socket,
+                                   payload.data(),
+                                   payload.size(),
+                                   0,
+                                   reinterpret_cast<const sockaddr*>(&destination),
+                                   sizeof(destination));
+#endif
+        if (sent < 0 || static_cast<std::size_t>(sent) != payload.size()) {
+            throw_socket_error("sendto", last_socket_error());
+        }
+    }
 };
 
 UdpListener::UdpListener(const std::string& bind_address, std::uint16_t port)
@@ -194,7 +244,20 @@ UdpListener::UdpListener(const std::string& bind_address, std::uint16_t port)
 UdpListener::~UdpListener() = default;
 
 std::optional<UdpDatagram> UdpListener::receive() {
-    return impl_->receive();
+    return impl_->receive(std::nullopt);
+}
+
+std::optional<UdpDatagram> UdpListener::receive_for(std::chrono::milliseconds timeout) {
+    if (timeout < std::chrono::milliseconds::zero()) {
+        throw std::invalid_argument("receive timeout cannot be negative");
+    }
+    return impl_->receive(timeout);
+}
+
+void UdpListener::send_to(const std::string& address,
+                          std::uint16_t port,
+                          const std::vector<std::uint8_t>& payload) {
+    impl_->send_to(address, port, payload);
 }
 
 void UdpListener::shutdown() noexcept {
