@@ -49,6 +49,7 @@ add_library(doip_uds_core
   src/udp_transport.cpp
   src/vehicle_identification.cpp
   src/vehicle_identification_handler.cpp
+  src/vehicle_identification_server.cpp
   src/version.cpp
 )
 target_include_directories(doip_uds_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

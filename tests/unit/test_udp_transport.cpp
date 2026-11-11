@@ -142,3 +142,22 @@ TEST(UdpListener, ShutdownInterruptsWaitingReceive) {
     EXPECT_FALSE(received.has_value());
     EXPECT_FALSE(listener.receive().has_value());
 }
+
+TEST(UdpListener, ReceiveForReturnsNulloptAfterTimeout) {
+    doip_uds::UdpListener listener("127.0.0.1", 0);
+
+    EXPECT_FALSE(listener.receive_for(std::chrono::milliseconds(20)).has_value());
+}
+
+TEST(UdpListener, SendToRejectsInvalidDestinationAddress) {
+    doip_uds::UdpListener listener("127.0.0.1", 0);
+
+    EXPECT_THROW(listener.send_to("not-an-ip-address", 13400, {}), std::invalid_argument);
+}
+
+TEST(UdpListener, SendToRejectsOversizedDatagram) {
+    doip_uds::UdpListener listener("127.0.0.1", 0);
+    const std::vector<std::uint8_t> payload(65508);
+
+    EXPECT_THROW(listener.send_to("127.0.0.1", 13400, payload), std::invalid_argument);
+}

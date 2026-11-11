@@ -10,8 +10,9 @@ UDP sends **datagrams**: each send is one independent packet containing a
 bounded number of bytes. Unlike TCP, UDP does not create a connection or a
 reliable byte stream. There is no built-in guarantee that a datagram arrives,
 arrives only once, or arrives in the order it was sent. The application must
-decide whether a packet is valid and whether to respond. DoIP framing and that
-request/response logic are handled in later milestones.
+decide whether a packet is valid and whether to respond. In this project, the
+UDP transport stays separate from DoIP framing; the M3.4 handler and M3.5
+server service compose the transport with request/response logic.
 
 A UDP socket is an operating-system endpoint. Binding it to an IPv4 address
 and port reserves that local endpoint so the operating system can deliver
@@ -24,9 +25,8 @@ matching datagrams to it:
   `port()` reports the actual port assigned after binding.
 
 Each received datagram includes its bytes and the sender's IPv4 address and
-UDP source port. Those sender fields are useful when later code needs to send a
-reply to the peer. The transport returns the packet as received; it does not
-interpret the bytes as a DoIP header or payload.
+UDP source port. The server uses those sender fields to return a response to
+the requesting peer.
 
 ## Listener API and lifecycle
 
@@ -39,16 +39,25 @@ if (datagram) {
     // datagram->payload: bytes in this one UDP packet
     // datagram->sender_address: for example "192.0.2.10"
     // datagram->sender_port: the peer's UDP source port
+    const auto response =
+        handle_vehicle_identification_datagram(identity, datagram->payload);
+    if (response) {
+        listener.send_to(datagram->sender_address, datagram->sender_port, *response);
+    }
 }
 ```
 
 Construction creates an IPv4 datagram socket and binds it. If setup fails,
 construction throws rather than leaving a listener that looks usable but is
 not. `receive()` waits for one packet, up to the maximum IPv4 UDP payload size
-handled by this implementation, and returns a `UdpDatagram`. It returns
-`std::nullopt` after shutdown. Socket setup, waiting, and receiving errors
-throw `std::system_error` with the failing operation in the message; a
-non-literal or invalid IPv4 bind address throws `std::invalid_argument`.
+handled by this implementation, and returns a `UdpDatagram`. `receive_for()`
+waits only up to the requested timeout and returns `std::nullopt` on timeout or
+shutdown. `send_to()` sends one datagram using the listener's bound socket and
+throws if the destination address is invalid or the OS reports a send error.
+Socket setup, waiting, receiving, and sending errors throw `std::system_error`
+with the failing operation in the message; an invalid IPv4 address throws
+`std::invalid_argument`. `send_to()` rejects payloads larger than the maximum
+IPv4 UDP payload size before calling the platform socket API.
 
 The listener polls socket readiness with a 100 ms timeout. That makes shutdown
 cooperative: `shutdown()` sets a thread-safe stop flag, and a waiting
@@ -57,6 +66,9 @@ cooperative: `shutdown()` sets a thread-safe stop flag, and a waiting
 Use one receiving thread per listener, join that thread after shutdown, and
 only then destroy the listener. Destruction closes the socket and releases
 Winsock resources on Windows.
+
+The server uses the bounded `receive_for()` call with a 100 ms timeout. This
+lets its main loop periodically check whether Ctrl+C requested shutdown.
 
 ## How the tests exercise it
 
@@ -70,6 +82,9 @@ or fixed port 13400 is required.
 | `ReportsAddressAlreadyInUse` | Opens one listener on an ephemeral loopback port, then attempts to bind a second listener to the same address and port. | A bind conflict is surfaced as `std::system_error` identifying the `bind` operation, instead of being silently ignored. |
 | `RejectsInvalidBindAddress` | Constructs a listener using a non-IP string. | Invalid address text is rejected with `std::invalid_argument` before receiving. |
 | `ShutdownInterruptsWaitingReceive` | Starts `receive()` on a worker thread with no incoming packet, calls `shutdown()`, then joins the worker. | A waiting receive exits and returns `std::nullopt`; calling `receive()` again after shutdown also returns `std::nullopt`. |
+| `ReceiveForReturnsNulloptAfterTimeout` | Waits briefly on an idle listener with `receive_for()`. | A timeout returns `std::nullopt` instead of blocking indefinitely. |
+| `SendToRejectsInvalidDestinationAddress` | Attempts to send using invalid IPv4 address text. | Invalid destinations throw `std::invalid_argument`. |
+| `SendToRejectsOversizedDatagram` | Attempts to send more than the maximum IPv4 UDP payload size. | Oversized payloads are rejected before reaching the platform socket API. |
 
 Run only these tests from the repository root with:
 
@@ -92,7 +107,8 @@ The implementation uses Winsock on Windows and BSD/POSIX sockets on Linux and
 Raspberry Pi. CMake links `ws2_32` on Windows; no third-party transport
 dependency is required.
 
-This is a transport primitive only. It does not parse DoIP generic headers,
-validate datagram contents, send responses, or start a listener from the
-`doip_server` executable. M3.4 connects received datagrams to the header,
-payload, and ECU-identity logic; M3.5 exercises the complete exchange.
+The transport remains independent of DoIP parsing. The server service composes
+the listener with the M3.4 request handler: it receives a datagram, asks the
+handler to validate it and build a response, then sends a valid response back
+to the datagram's sender. `doip_server` runs this service on UDP port 13400.
+The localhost integration test covers the complete request/response path.

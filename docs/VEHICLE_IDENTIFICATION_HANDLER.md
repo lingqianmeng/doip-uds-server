@@ -2,9 +2,9 @@
 
 M3.4 connects one received DoIP UDP datagram to the existing generic-header
 codec, vehicle-identification payload codec, and configured ECU identity. It is
-a pure protocol function: it performs no socket I/O and does not start the
-server. M3.5 will connect this handler to the UDP listener and verify a complete
-localhost exchange.
+a pure protocol function: it performs no socket I/O. M3.5's server service
+passes received UDP datagrams to this handler and sends returned responses to
+the originating client.
 
 ## Handler behavior
 
@@ -31,17 +31,22 @@ exact payload length.
 
 Malformed headers, unsupported versions or payload types, incorrect lengths,
 and non-matching VIN/EID values produce no response. This function does not
-send the response; its caller will do that when socket response support is
-added.
+send the response; `process_next_vehicle_identification_request()` handles
+receiving and sending around it.
 
 ## Implementation and tests
 
 - `include/doip_uds/vehicle_identification_handler.hpp` declares the handler.
 - `src/vehicle_identification_handler.cpp` composes the existing codecs and
   identity data to validate requests and construct framed responses.
+- `include/doip_uds/vehicle_identification_server.hpp` and
+  `src/vehicle_identification_server.cpp` connect one listener receive, handler
+  call, and response send.
 - `tests/unit/test_vehicle_identification_handler.cpp` covers broadcast and
   matching targeted requests, identity mismatches, malformed datagrams, and
   response header and identity fields.
+- `tests/integration/test_vehicle_identification_udp.cpp` verifies a broadcast
+  request and identity response using real UDP sockets on loopback.
 
 Run the focused tests from the repository root:
 
@@ -53,5 +58,5 @@ cmake --build --preset debug
 On Windows PowerShell, run
 `.\build\debug\tests\unit_tests.exe --gtest_filter=VehicleIdentificationHandler.*`.
 
-This milestone only tests request handling in memory. It does not claim
-end-to-end network behavior or full DoIP conformance; those are outside M3.4.
+The integration test covers a local UDP exchange, not network delivery under
+packet loss or full DoIP conformance.
