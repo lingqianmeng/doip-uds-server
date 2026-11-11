@@ -16,7 +16,11 @@ src/                    Core library implementation
 tests/unit/             GoogleTest unit tests
 CMakeLists.txt          Targets, compiler settings, and dependency setup
 CMakePresets.json       Debug/release Ninja build presets
+docs/                   Feature guides
 ```
+
+See the [roadmap documentation map](docs/ROADMAP_DOCUMENTATION_MAP.md) to find
+guides by milestone and review their PR history.
 
 ## Build and test
 
