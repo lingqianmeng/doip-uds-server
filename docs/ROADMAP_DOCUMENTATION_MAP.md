@@ -15,7 +15,7 @@ separate document.
 | M3.2 — ECU identity configuration | [ECU identity configuration](ECU_IDENTITY_CONFIGURATION.md) | Guide added with implementation PR #8. |
 | M3.3 — UDP transport | [UDP transport](UDP_TRANSPORT.md) | Guide added with implementation PR #9 and expanded in documentation PR #10. |
 | M3.4 — Vehicle-identification request handler | [Vehicle-identification handler](VEHICLE_IDENTIFICATION_HANDLER.md) | Guide added with implementation PR #11 and updated in PR #12. |
-| M3.5 — UDP discovery integration and usage | [UDP transport](UDP_TRANSPORT.md), [vehicle-identification handler](VEHICLE_IDENTIFICATION_HANDLER.md), and [README run instructions](../README.md#build-and-test) | PR #12 updated the existing guides and README; it did not add a separate M3.5 guide. |
+| M3.5 — UDP discovery integration and usage | [UDP transport](UDP_TRANSPORT.md), [vehicle-identification handler](VEHICLE_IDENTIFICATION_HANDLER.md), [DoIP UDP discovery demo](DOIP_DISCOVERY_DEMO.md), and [README run instructions](../README.md#build-and-test) | PR #12 updated the original guides and README; the dedicated walkthrough records the Scoop Wireshark loopback capture and VIR/VAM steps. |
 
 The M3 breakdown itself was recorded in the README in PR #5. The detailed
 guides explain the implementation and tests for individual features; the

@@ -57,6 +57,13 @@ void expect_identity_response(const std::vector<std::uint8_t>& datagram) {
 
 }  // namespace
 
+TEST(VehicleIdentificationHandler, BuildsVehicleAnnouncementWithConfiguredIdentity) {
+    const auto announcement =
+        doip_uds::make_vehicle_identification_response_datagram(kIdentity);
+
+    expect_identity_response(announcement);
+}
+
 TEST(VehicleIdentificationHandler, RespondsToBroadcastRequest) {
     const auto request =
         make_request(doip_uds::VehicleIdentificationRequest{});

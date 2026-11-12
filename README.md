@@ -4,7 +4,7 @@
 
 A C++17 project for building a simulated ECU diagnostic server using DoIP (ISO 13400-2) and UDS (ISO 14229-1), with Raspberry Pi as a target platform.
 
-> **Current status:** M3.5 UDP vehicle-identification discovery is implemented. The server loads ECU identity, listens on UDP port 13400, and replies to broadcast or matching VIN/EID requests. TCP diagnostic connections and UDS services are not implemented yet.
+> **Current status:** M3.5 UDP vehicle-identification discovery is implemented. The server loads ECU identity, broadcasts three startup vehicle-identification announcements, and replies to broadcast or matching VIN/EID requests. TCP diagnostic connections and UDS services are not implemented yet.
 
 ## Project layout
 
@@ -51,14 +51,36 @@ Run the UDP discovery server from the repository root so it can find the default
 ./build/debug/doip_server config/ecu_config.json
 ```
 
-Check discovery from another terminal on the same computer with Python:
+The server broadcasts three startup VAMs to `255.255.255.255:13400`, with a
+random initial delay of up to 500 ms and 500 ms between announcements. To see
+the broadcast on the network, start Wireshark on the active network adapter
+before starting the server and use the display filter `udp.port == 13400`.
+Each VAM is a DoIP payload type `0x0004`; the VIN is in the first 17 payload
+bytes (UDP payload offsets 8–24). The server also prints a `[VAM startup]` log
+line for each announcement.
 
 ```sh
-python -c "import socket,struct; s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM); s.settimeout(3); s.sendto(bytes.fromhex('ff 00 00 01 00 00 00 00'),('127.0.0.1',13400)); d,_=s.recvfrom(1024); v,iv,t,n=struct.unpack('>BBHI',d[:8]); assert (v,iv,t,n)==(2,253,4,33) and len(d)==41; print('ECU VIN:',d[8:25].decode('ascii')); print('Logical address: 0x%04X'%int.from_bytes(d[25:27],'big'))"
+# Discover on the local network (broadcast VIR, unicast VAM response)
+python tools/doip_vir_vam_demo.py
+
+# Or target loopback when both programs run on the same computer
+python tools/doip_vir_vam_demo.py --destination 127.0.0.1
 ```
 
-The request is a broadcast vehicle-identification request sent to loopback. A
-successful discovery prints the ECU's configured VIN and logical address.
+On Windows PowerShell, the same demo is available without Python:
+
+```powershell
+.\tools\doip_vir_vam_demo.ps1
+.\tools\doip_vir_vam_demo.ps1 -Destination 127.0.0.1
+```
+
+For the complete Windows loopback-capture walkthrough using Scoop Wireshark,
+see the [DoIP UDP discovery demo guide](docs/DOIP_DISCOVERY_DEMO.md).
+
+The demo prints the responding ECU's VIN, logical address, EID, and GID. The
+server logs the reply as `[VAM response]`, distinct from startup announcements.
+On the Wireshark capture, the VIR has payload type `0x0001`; its VAM response
+has type `0x0004` and contains the same identity fields.
 The server only responds to identification requests; TCP routing activation
 and UDS diagnostic services are planned for later milestones.
 
@@ -93,7 +115,7 @@ Implement protocol logic in the core library, keeping the executable entry point
   - [x] **M3.2 — ECU identity configuration:** load the ECU's VIN, logical address, EID, and GID from `config/ecu_config.json`. **Done when:** valid configuration produces a typed identity and invalid/missing fields produce a clear startup error; validation has unit tests.
   - [x] **M3.3 — UDP transport:** create a cross-platform UDP listener on the DoIP port (13400), separate from protocol handling. **Done when:** it can bind, receive datagrams, report bind/receive errors, and shut down cleanly; transport behavior has tests where practical.
   - [x] **M3.4 — Request handling:** connect datagrams, generic-header parsing, M3.1 payload decoding, and the configured identity. **Done when:** valid broadcast and matching VIN/EID requests produce a correctly framed vehicle-identification response, while malformed or non-matching requests do not produce a response.
-  - [x] **M3.5 — Integration and usage:** demonstrate the server and a client exchanging identification messages over localhost. **Done when:** an automated integration test verifies the UDP request/response and README instructions explain configuration, startup, and a discovery check.
+  - [x] **M3.5 — Integration and usage:** demonstrate startup vehicle announcements and client discovery. **Done when:** an automated integration test verifies UDP request/response; startup sends three broadcast VAMs; and the README and [discovery demo guide](docs/DOIP_DISCOVERY_DEMO.md) cover startup, packet capture, and the VIR/VAM demo client.
 - [ ] M4 TCP routing activation and diagnostic messages
 - [ ] M5 UDS dispatcher, 0x10 / 0x3E / 0x11
 - [ ] M6 0x22 / 0x2E

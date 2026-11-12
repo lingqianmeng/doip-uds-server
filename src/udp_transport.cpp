@@ -93,6 +93,24 @@ struct UdpListener::Impl {
             throw_socket_error("socket", last_socket_error());
         }
 
+#ifdef _WIN32
+        const char broadcast_enabled = 1;
+        if (setsockopt(socket,
+                       SOL_SOCKET,
+                       SO_BROADCAST,
+                       &broadcast_enabled,
+                       sizeof(broadcast_enabled)) != 0) {
+#else
+        const int broadcast_enabled = 1;
+        if (setsockopt(socket,
+                       SOL_SOCKET,
+                       SO_BROADCAST,
+                       &broadcast_enabled,
+                       static_cast<socklen_t>(sizeof(broadcast_enabled))) != 0) {
+#endif
+            throw_socket_error("setsockopt(SO_BROADCAST)", last_socket_error());
+        }
+
         sockaddr_in address{};
         address.sin_family = AF_INET;
         address.sin_port = htons(requested_port);

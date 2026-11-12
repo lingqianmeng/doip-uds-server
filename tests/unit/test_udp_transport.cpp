@@ -155,6 +155,12 @@ TEST(UdpListener, SendToRejectsInvalidDestinationAddress) {
     EXPECT_THROW(listener.send_to("not-an-ip-address", 13400, {}), std::invalid_argument);
 }
 
+TEST(UdpListener, SendsLimitedBroadcastDatagram) {
+    doip_uds::UdpListener listener("0.0.0.0", 0);
+
+    EXPECT_NO_THROW(listener.send_to("255.255.255.255", doip_uds::kDoipUdpPort, {0x01}));
+}
+
 TEST(UdpListener, SendToRejectsOversizedDatagram) {
     doip_uds::UdpListener listener("127.0.0.1", 0);
     const std::vector<std::uint8_t> payload(65508);
