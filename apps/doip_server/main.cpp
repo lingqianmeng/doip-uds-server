@@ -44,6 +44,7 @@ int main(int argc, char* argv[]) {
         std::cout << std::dec
                   << "Listening for DoIP vehicle-identification requests on UDP port "
                   << listener.port() << ". Press Ctrl+C to stop.\n";
+        doip_uds::send_startup_vehicle_announcements(listener, identity);
 
         constexpr auto kReceiveTimeout = std::chrono::milliseconds(100);
         while (stop_requested == 0) {

@@ -7,6 +7,10 @@
 
 namespace doip_uds {
 
+/// Sends the three startup vehicle-identification announcements to the IPv4
+/// limited-broadcast address, using DoIP announcement timing.
+void send_startup_vehicle_announcements(UdpListener& listener, const EcuIdentity& identity);
+
 /// Receives at most one datagram, handles a matching vehicle-identification
 /// request, and sends its response to the datagram's sender.
 /// Returns true if a datagram was received, including malformed requests.

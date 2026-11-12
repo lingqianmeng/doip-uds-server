@@ -68,7 +68,46 @@ only then destroy the listener. Destruction closes the socket and releases
 Winsock resources on Windows.
 
 The server uses the bounded `receive_for()` call with a 100 ms timeout. This
-lets its main loop periodically check whether Ctrl+C requested shutdown.
+lets its main loop periodically check whether Ctrl+C requested shutdown. The
+socket enables IPv4 broadcast transmission so the same bound listener can send
+the startup VAMs as well as unicast replies.
+
+## Vehicle announcements and discovery demo
+
+When the server starts, it sends three vehicle-identification announcement
+datagrams (DoIP payload type `0x0004`) to the IPv4 limited-broadcast address
+`255.255.255.255:13400`. The first announcement follows a randomized delay of
+0–500 ms; the next two are 500 ms apart. Each announcement contains the
+configured VIN, logical address, EID, and GID. Startup sends and request
+responses are labeled separately in the console as `[VAM startup]` and
+`[VAM response]`.
+
+The standard-library client `tools/doip_vir_vam_demo.py` sends a broadcast
+vehicle-identification request (VIR, payload type `0x0001`) and waits for the
+server's unicast VAM response. Run it from the repository root while the
+server is listening:
+
+```sh
+python tools/doip_vir_vam_demo.py
+python tools/doip_vir_vam_demo.py --destination 127.0.0.1
+```
+
+On Windows, run the PowerShell version instead:
+
+```powershell
+.\tools\doip_vir_vam_demo.ps1
+.\tools\doip_vir_vam_demo.ps1 -Destination 127.0.0.1
+```
+
+The first command discovers entities on the local network; the second sends
+the request to a server on the same machine. To inspect packets, start a
+Wireshark capture on the active network adapter before the server, filter with
+`udp.port == 13400`, and inspect the DoIP payload bytes. The generic DoIP
+header occupies UDP payload offsets 0–7; the VIN is at offsets 8–24 in a VAM.
+The loopback option is useful for the request/reply demo. The Windows
+[discovery demo guide](DOIP_DISCOVERY_DEMO.md) also documents capturing the
+startup broadcasts on the Npcap Loopback adapter; on other setups, capture on
+the network adapter carrying the broadcast.
 
 ## How the tests exercise it
 
@@ -84,6 +123,7 @@ or fixed port 13400 is required.
 | `ShutdownInterruptsWaitingReceive` | Starts `receive()` on a worker thread with no incoming packet, calls `shutdown()`, then joins the worker. | A waiting receive exits and returns `std::nullopt`; calling `receive()` again after shutdown also returns `std::nullopt`. |
 | `ReceiveForReturnsNulloptAfterTimeout` | Waits briefly on an idle listener with `receive_for()`. | A timeout returns `std::nullopt` instead of blocking indefinitely. |
 | `SendToRejectsInvalidDestinationAddress` | Attempts to send using invalid IPv4 address text. | Invalid destinations throw `std::invalid_argument`. |
+| `SendsLimitedBroadcastDatagram` | Sends a datagram to `255.255.255.255`. | The listener has the socket option required for IPv4 broadcast transmission. |
 | `SendToRejectsOversizedDatagram` | Attempts to send more than the maximum IPv4 UDP payload size. | Oversized payloads are rejected before reaching the platform socket API. |
 
 Run only these tests from the repository root with:
@@ -111,4 +151,5 @@ The transport remains independent of DoIP parsing. The server service composes
 the listener with the M3.4 request handler: it receives a datagram, asks the
 handler to validate it and build a response, then sends a valid response back
 to the datagram's sender. `doip_server` runs this service on UDP port 13400.
-The localhost integration test covers the complete request/response path.
+The localhost integration test covers the complete request/response path; the
+announcement encoder is covered by the vehicle-identification handler tests.

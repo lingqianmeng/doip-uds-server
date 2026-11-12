@@ -7,6 +7,30 @@
 
 namespace doip_uds {
 
+std::vector<std::uint8_t> make_vehicle_identification_response_datagram(
+    const EcuIdentity& identity) {
+    const VehicleIdentificationResponse response{
+        identity.vin,
+        identity.logical_address,
+        identity.eid,
+        identity.gid,
+        0x00,
+        0x00};
+    const auto response_payload = encode_vehicle_identification_response(response);
+    const DoipHeader response_header{
+        kDoipProtocolVersion,
+        kDoipPayloadTypeVehicleIdentificationResponse,
+        static_cast<std::uint32_t>(response_payload.size())};
+    const auto encoded_header = encode_doip_header(response_header);
+
+    std::vector<std::uint8_t> response_datagram;
+    response_datagram.reserve(encoded_header.size() + response_payload.size());
+    response_datagram.insert(response_datagram.end(), encoded_header.begin(), encoded_header.end());
+    response_datagram.insert(
+        response_datagram.end(), response_payload.begin(), response_payload.end());
+    return response_datagram;
+}
+
 std::optional<std::vector<std::uint8_t>> handle_vehicle_identification_datagram(
     const EcuIdentity& identity,
     const std::vector<std::uint8_t>& datagram) {
@@ -41,26 +65,7 @@ std::optional<std::vector<std::uint8_t>> handle_vehicle_identification_datagram(
         return std::nullopt;
     }
 
-    const VehicleIdentificationResponse response{
-        identity.vin,
-        identity.logical_address,
-        identity.eid,
-        identity.gid,
-        0x00,
-        0x00};
-    const auto response_payload = encode_vehicle_identification_response(response);
-    const DoipHeader response_header{
-        kDoipProtocolVersion,
-        kDoipPayloadTypeVehicleIdentificationResponse,
-        static_cast<std::uint32_t>(response_payload.size())};
-    const auto encoded_header = encode_doip_header(response_header);
-
-    std::vector<std::uint8_t> response_datagram;
-    response_datagram.reserve(encoded_header.size() + response_payload.size());
-    response_datagram.insert(response_datagram.end(), encoded_header.begin(), encoded_header.end());
-    response_datagram.insert(
-        response_datagram.end(), response_payload.begin(), response_payload.end());
-    return response_datagram;
+    return make_vehicle_identification_response_datagram(identity);
 }
 
 }  // namespace doip_uds
