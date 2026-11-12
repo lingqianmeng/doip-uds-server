@@ -117,6 +117,11 @@ Implement protocol logic in the core library, keeping the executable entry point
   - [x] **M3.4 — Request handling:** connect datagrams, generic-header parsing, M3.1 payload decoding, and the configured identity. **Done when:** valid broadcast and matching VIN/EID requests produce a correctly framed vehicle-identification response, while malformed or non-matching requests do not produce a response.
   - [x] **M3.5 — Integration and usage:** demonstrate startup vehicle announcements and client discovery. **Done when:** an automated integration test verifies UDP request/response; startup sends three broadcast VAMs; and the README and [discovery demo guide](docs/DOIP_DISCOVERY_DEMO.md) cover startup, packet capture, and the VIR/VAM demo client.
 - [ ] M4 TCP routing activation and diagnostic messages
+  - [ ] **M4.1 — TCP transport:** add a cross-platform TCP listener on DoIP port 13400 and manage accepted connections. **Done when:** connection lifecycle and shutdown are tested, and the supported client/session policy is documented.
+  - [ ] **M4.2 — TCP message framing:** assemble complete DoIP messages from the TCP byte stream using the generic header. **Done when:** fragmented headers/payloads, multiple messages in one read, and invalid or oversized lengths are handled and tested.
+  - [ ] **M4.3 — Routing activation:** encode/decode Routing Activation Request (`0x0005`) and Response (`0x0006`), validating requests against the project's ISO reference and tracking activation per connection. **Done when:** supported and rejected activations produce the correct response, with unit and connection-level tests.
+  - [ ] **M4.4 — Diagnostic-message transport:** accept Diagnostic Messages (`0x8001`) only after activation, validate logical addresses, send the appropriate ACK (`0x8002`) or NACK (`0x8003`), and hand accepted payloads to a future UDS layer without interpreting services. **Done when:** inactive, invalid-address, and valid-message paths are covered by tests.
+  - [ ] **M4.5 — Integration and usage:** verify the TCP connect → routing activation → diagnostic-message flow end to end and document a demo. **Done when:** automated integration tests cover the flow and the demo shows the activation and diagnostic acknowledgment exchange.
 - [ ] M5 UDS dispatcher, 0x10 / 0x3E / 0x11
 - [ ] M6 0x22 / 0x2E
 - [ ] M7 0x19 / 0x14
