@@ -41,7 +41,8 @@ int main(int argc, char* argv[]) {
     try {
         doip_uds::UdpListener listener;
         std::signal(SIGINT, handle_interrupt);
-        std::cout << "Listening for DoIP vehicle-identification requests on UDP port "
+        std::cout << std::dec
+                  << "Listening for DoIP vehicle-identification requests on UDP port "
                   << listener.port() << ". Press Ctrl+C to stop.\n";
 
         constexpr auto kReceiveTimeout = std::chrono::milliseconds(100);
