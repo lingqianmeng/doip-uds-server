@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.21)
 project(doip_uds_server VERSION 0.1.0 LANGUAGES CXX)
 
+find_package(Threads REQUIRED)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -46,6 +48,7 @@ endif()
 add_library(doip_uds_core
   src/doip_header.cpp
   src/ecu_identity.cpp
+  src/tcp_transport.cpp
   src/udp_transport.cpp
   src/vehicle_identification.cpp
   src/vehicle_identification_handler.cpp
@@ -60,7 +63,7 @@ endif()
 
 # Server executable
 add_executable(doip_server apps/doip_server/main.cpp)
-target_link_libraries(doip_server PRIVATE doip_uds_core project_warnings)
+target_link_libraries(doip_server PRIVATE doip_uds_core project_warnings Threads::Threads)
 
 if(DOIP_BUILD_TESTS)
   enable_testing()

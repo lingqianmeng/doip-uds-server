@@ -4,7 +4,7 @@
 
 A C++17 project for building a simulated ECU diagnostic server using DoIP (ISO 13400-2) and UDS (ISO 14229-1), with Raspberry Pi as a target platform.
 
-> **Current status:** M3.5 UDP vehicle-identification discovery is implemented. The server loads ECU identity, broadcasts three startup vehicle-identification announcements, and replies to broadcast or matching VIN/EID requests. TCP diagnostic connections and UDS services are not implemented yet.
+> **Current status:** M3.5 UDP vehicle-identification discovery and M4.1 TCP connection transport are implemented. The server handles UDP discovery on port 13400 and accepts multiple concurrent TCP clients on the same numeric port. Routing activation, diagnostic-message handling, and UDS services are not implemented yet.
 
 ## Project layout
 
@@ -38,7 +38,7 @@ ctest --preset debug
 
 Use `release` instead of `debug` for a release build. Presets generate build files under `build/debug` and `build/release`.
 
-Run the UDP discovery server from the repository root so it can find the default ECU configuration. It listens on all local IPv4 interfaces at UDP port 13400; press Ctrl+C to stop it.
+Run the server from the repository root so it can find the default ECU configuration. It listens on all local IPv4 interfaces at UDP port 13400 and accepts TCP connections on TCP port 13400; press Ctrl+C to stop it.
 
 ```sh
 # Linux
@@ -100,7 +100,7 @@ ctest --test-dir build/debug --output-on-failure
 4. With `DOIP_BUILD_TESTS=ON` (the default), it finds or downloads GoogleTest, creates `unit_tests` from `tests/unit/` and `integration_tests` from `tests/integration/`, and registers both with CTest.
 5. Ninja executes the generated compile and link steps. CTest runs the registered tests.
 
-The core library currently exposes `doip_uds::version()`, the DoIP generic-header and vehicle-identification payload codecs, ECU identity configuration loading, the IPv4 UDP listener, a vehicle-identification datagram handler, and the UDP request/response service. The executable loads the ECU identity, listens for identification requests, and sends framed responses to matching clients. M3.1 and M3.2 standards-specific checks are based on the project's local reference copy of ISO 13400-2:2012(E); this does not imply conformance to later editions or complete protocol conformance. See [`docs/ECU_IDENTITY_CONFIGURATION.md`](docs/ECU_IDENTITY_CONFIGURATION.md), [`docs/UDP_TRANSPORT.md`](docs/UDP_TRANSPORT.md), and [`docs/VEHICLE_IDENTIFICATION_HANDLER.md`](docs/VEHICLE_IDENTIFICATION_HANDLER.md) for implementation details.
+The core library currently exposes `doip_uds::version()`, the DoIP generic-header and vehicle-identification payload codecs, ECU identity configuration loading, IPv4 UDP and TCP listeners, a vehicle-identification datagram handler, and the UDP request/response service. The executable loads the ECU identity, handles UDP discovery, and tracks concurrent TCP connections; TCP DoIP messages are not yet processed. M3.1 and M3.2 standards-specific checks are based on the project's local reference copy of ISO 13400-2:2012(E); this does not imply conformance to later editions or complete protocol conformance. See [`docs/ECU_IDENTITY_CONFIGURATION.md`](docs/ECU_IDENTITY_CONFIGURATION.md), [`docs/UDP_TRANSPORT.md`](docs/UDP_TRANSPORT.md), [`docs/TCP_TRANSPORT.md`](docs/TCP_TRANSPORT.md), and [`docs/VEHICLE_IDENTIFICATION_HANDLER.md`](docs/VEHICLE_IDENTIFICATION_HANDLER.md) for implementation details.
 
 ## Development direction
 
@@ -117,7 +117,7 @@ Implement protocol logic in the core library, keeping the executable entry point
   - [x] **M3.4 — Request handling:** connect datagrams, generic-header parsing, M3.1 payload decoding, and the configured identity. **Done when:** valid broadcast and matching VIN/EID requests produce a correctly framed vehicle-identification response, while malformed or non-matching requests do not produce a response.
   - [x] **M3.5 — Integration and usage:** demonstrate startup vehicle announcements and client discovery. **Done when:** an automated integration test verifies UDP request/response; startup sends three broadcast VAMs; and the README and [discovery demo guide](docs/DOIP_DISCOVERY_DEMO.md) cover startup, packet capture, and the VIR/VAM demo client.
 - [ ] M4 TCP routing activation and diagnostic messages
-  - [ ] **M4.1 — TCP transport:** add a cross-platform TCP listener on DoIP port 13400 and manage accepted connections. **Done when:** connection lifecycle and shutdown are tested, and the supported client/session policy is documented.
+  - [x] **M4.1 — TCP transport:** add a cross-platform TCP listener on DoIP port 13400 and manage accepted connections. **Done when:** connection lifecycle and shutdown are tested, and the supported client/session policy is documented. See the [TCP transport guide](docs/TCP_TRANSPORT.md) and [M4.1 demo variant](docs/DOIP_DISCOVERY_DEMO_M4_1.md).
   - [ ] **M4.2 — TCP message framing:** assemble complete DoIP messages from the TCP byte stream using the generic header. **Done when:** fragmented headers/payloads, multiple messages in one read, and invalid or oversized lengths are handled and tested.
   - [ ] **M4.3 — Routing activation:** encode/decode Routing Activation Request (`0x0005`) and Response (`0x0006`), validating requests against the project's ISO reference and tracking activation per connection. **Done when:** supported and rejected activations produce the correct response, with unit and connection-level tests.
   - [ ] **M4.4 — Diagnostic-message transport:** accept Diagnostic Messages (`0x8001`) only after activation, validate logical addresses, send the appropriate ACK (`0x8002`) or NACK (`0x8003`), and hand accepted payloads to a future UDS layer without interpreting services. **Done when:** inactive, invalid-address, and valid-message paths are covered by tests.
