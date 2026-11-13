@@ -8,6 +8,7 @@ find_package(Threads REQUIRED)
 add_executable(unit_tests
   unit/test_doip_header.cpp
   unit/test_ecu_identity.cpp
+  unit/test_tcp_transport.cpp
   unit/test_udp_transport.cpp
   unit/test_vehicle_identification.cpp
   unit/test_vehicle_identification_handler.cpp

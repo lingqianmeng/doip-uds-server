@@ -36,7 +36,7 @@ In the interface list, identify `NPF_Loopback`. In the setup described here it
 is interface 9. Start capture with:
 
 ```powershell
-& "$(scoop prefix wireshark)\dumpcap.exe" -i 9 -f "udp port 13400" -w doip_udp.pcapng
+& "$(scoop prefix wireshark)\dumpcap.exe" -i 9 -f "udp port 13400" -w captures\doip_udp.pcapng
 ```
 
 Leave this terminal running. If the interface index changes, substitute the
@@ -72,7 +72,7 @@ Stop `dumpcap` with **Ctrl+C** after the demo completes. Stop the server with
 The capture file is written to the current directory. Open it in Wireshark:
 
 ```powershell
-wireshark .\doip_udp.pcapng
+wireshark .\captures\doip_udp.pcapng
 ```
 
 Use the display filter:
