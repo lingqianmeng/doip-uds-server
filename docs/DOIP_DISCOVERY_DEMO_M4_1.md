@@ -11,7 +11,7 @@ traffic alongside its UDP VAM/VIR exchange.
 | Capture filter | `udp port 13400` | `port 13400` to capture both TCP and UDP |
 | Capture file | `captures\doip_udp.pcapng` | `captures\doip_m4_1.pcapng`, so the original capture is not overwritten |
 | Server command | `.\build\debug\doip_server.exe` | Unchanged |
-| Terminal 3 | Sends a VIR and receives a VAM | Runs the same VIR/VAM client, then opens a TCP connection |
+| Terminal 3 | Sends a VIR and receives a VAM | One combined client performs VIR/VAM, then opens a TCP connection |
 
 Use the prerequisites and Loopback interface selection in the
 [original demo guide](DOIP_DISCOVERY_DEMO.md). Run these commands from the
@@ -27,7 +27,7 @@ new capture. The example uses interface 9:
 ```
 
 The capture filter `port 13400` matches TCP and UDP traffic. Keep this
-terminal running while you start the server and run both client commands.
+terminal running while you start the server and run the demo client.
 
 ## Terminal 2 — start the server (unchanged)
 
@@ -41,24 +41,19 @@ The server continues to send its startup VAMs and answer UDP discovery. It
 also listens for TCP connections on port 13400 and logs accepted and
 disconnected clients.
 
-## Terminal 3 — run VIR/VAM, then connect over TCP
+## Terminal 3 — run the complete VIR/VAM and TCP demo
 
-First run the unchanged UDP discovery client:
-
-```powershell
-.\tools\doip_vir_vam_demo.ps1 -Destination 127.0.0.1
-```
-
-Then make a TCP connection and hold it open briefly:
+Run the M4.1 client. It performs the UDP VIR/VAM exchange, prints the ECU
+identity, then establishes a TCP connection and holds it open:
 
 ```powershell
-.\tools\doip_tcp_connect_demo.ps1 -Destination 127.0.0.1
+.\tools\doip_m4_1_demo.ps1 -Destination 127.0.0.1 -HoldSeconds 10
 ```
 
-The TCP helper connects to port 13400, keeps the connection open for three
-seconds, then closes it. Use `-HoldSeconds 10` to keep it open longer while
-inspecting packets. The server should log `[TCP] Accepted client` and
-`[TCP] Client ... disconnected`.
+The original [M3 UDP client](../tools/doip_vir_vam_demo.ps1) remains available
+and unchanged for the original demo. The server should log `[VAM response]`,
+`[TCP] Accepted client`, and, after the hold period, `[TCP] Client ...
+disconnected`.
 
 ## Demonstrate concurrent TCP clients
 
@@ -88,8 +83,8 @@ In Wireshark, keep the display filter `tcp.port == 13400` to inspect the TCP
 handshakes, or use `udp.port == 13400 || tcp.port == 13400` to include the UDP
 VIR/VAM traffic. The concurrent clients should appear as separate TCP streams.
 
-After all demo clients finish, stop `dumpcap` with **Ctrl+C**, then stop the
-server with **Ctrl+C** in Terminal 2.
+After the combined demo and any concurrent-client tests finish, stop `dumpcap`
+with **Ctrl+C**, then stop the server with **Ctrl+C** in Terminal 2.
 
 ## Inspect the capture
 
