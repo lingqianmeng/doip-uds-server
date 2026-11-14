@@ -1,4 +1,4 @@
-# UDP transport (M3.3)
+# m3_3_udp_transport
 
 M3.3 provides an IPv4 UDP listener independent of DoIP parsing, ECU identity,
 and request handling. This page explains the UDP concepts behind the listener,
@@ -105,7 +105,7 @@ Wireshark capture on the active network adapter before the server, filter with
 `udp.port == 13400`, and inspect the DoIP payload bytes. The generic DoIP
 header occupies UDP payload offsets 0–7; the VIN is at offsets 8–24 in a VAM.
 The loopback option is useful for the request/reply demo. The Windows
-[discovery demo guide](DOIP_DISCOVERY_DEMO.md) also documents capturing the
+[demo_m3_5_udp_discovery](demo_m3_5_udp_discovery.md) also documents capturing the
 startup broadcasts on the Npcap Loopback adapter; on other setups, capture on
 the network adapter carrying the broadcast.
 

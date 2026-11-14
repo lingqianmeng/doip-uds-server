@@ -1,4 +1,4 @@
-# TCP transport (M4.1)
+# m4_1_tcp_transport
 
 M4.1 adds a cross-platform IPv4 TCP listener on the standard DoIP port
 (`13400`) alongside the existing UDP discovery listener. TCP and UDP have
@@ -13,7 +13,7 @@ socket and records the peer IPv4 address and source port. An accepted
 connection remains open until the peer disconnects or the connection object
 is destroyed. `is_connected()` checks for peer closure without consuming any
 additional bytes from the socket. M4.2's `receive_message_for()` reads and
-buffers incoming DoIP frames; see the [TCP message-framing guide](TCP_MESSAGE_FRAMING.md).
+buffers incoming DoIP frames; see the [m4_2_tcp_message_framing](m4_2_tcp_message_framing.md).
 
 The listener polls with a 100 ms interval. Calling `shutdown()` causes a
 waiting `accept_for()` to return within approximately one poll interval. Socket
@@ -36,7 +36,7 @@ loop, joins the worker, and releases active TCP connections.
 
 To observe both UDP discovery and the TCP handshake without changing the
 original UDP-only walkthrough, use the separate
-[M4.1 demo variant](DOIP_DISCOVERY_DEMO_M4_1.md).
+[demo_m4_1_tcp_connections](demo_m4_1_tcp_connections.md).
 
 ## Tests
 

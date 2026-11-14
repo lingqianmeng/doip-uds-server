@@ -1,4 +1,4 @@
-# Vehicle-identification request handler (M3.4)
+# m3_4_vehicle_identification_handler
 
 M3.4 connects one received DoIP UDP datagram to the existing generic-header
 codec, vehicle-identification payload codec, and configured ECU identity. It is

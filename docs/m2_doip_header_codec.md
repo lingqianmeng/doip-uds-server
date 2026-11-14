@@ -1,4 +1,4 @@
-# DoIP generic-header codec (M2)
+# m2_doip_header_codec
 
 M2 adds a codec for converting the DoIP generic header between an 8-byte wire
 representation and a C++ structure. It does not implement networking or UDS

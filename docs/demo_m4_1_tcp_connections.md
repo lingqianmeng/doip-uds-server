@@ -1,6 +1,6 @@
-# DoIP discovery demo — M4.1 TCP connections
+# demo_m4_1_tcp_connections
 
-This is an M4.1 variant of the [UDP discovery demo](DOIP_DISCOVERY_DEMO.md).
+This is an M4.1 variant of the [M3.5 UDP discovery demo](demo_m3_5_udp_discovery.md).
 It leaves that original demo unchanged and adds visible TCP connection
 traffic alongside its UDP VAM/VIR exchange.
 
@@ -14,7 +14,7 @@ traffic alongside its UDP VAM/VIR exchange.
 | Terminal 3 | Sends a VIR and receives a VAM | One combined client performs VIR/VAM, then opens a TCP connection |
 
 Use the prerequisites and Loopback interface selection in the
-[original demo guide](DOIP_DISCOVERY_DEMO.md). Run these commands from the
+[original demo guide](demo_m3_5_udp_discovery.md). Run these commands from the
 repository root in three PowerShell terminals.
 
 ## Terminal 1 — capture both protocols
@@ -103,5 +103,5 @@ udp.port == 13400 || tcp.port == 13400
 You should see the UDP startup VAMs and VIR/VAM exchange, plus the TCP
 three-way handshake and connection close. This M4.1 demo's TCP helper sends no
 application payload; M4.2 stream framing is described in the
-[TCP message-framing guide](TCP_MESSAGE_FRAMING.md), and routing activation is
+[m4_2_tcp_message_framing](m4_2_tcp_message_framing.md), and routing activation is
 planned for M4.3. To focus only on the TCP activity, use `tcp.port == 13400`.

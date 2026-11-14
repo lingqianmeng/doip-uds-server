@@ -1,4 +1,4 @@
-# ECU identity configuration (M3.2)
+# m3_2_ecu_identity_configuration
 
 M3.2 loads the ECU's vehicle-identification values from
 `config/ecu_config.json` and validates them before the server starts. The

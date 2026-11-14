@@ -1,4 +1,4 @@
-# TCP message framing (M4.2)
+# m4_2_tcp_message_framing
 
 TCP is a byte stream, so a `send()` call does not correspond to one `recv()`
 call. A DoIP generic header or payload may arrive in pieces, and several DoIP
@@ -31,7 +31,7 @@ responses; those are later M4 sub-milestones.
 
 ## Demo
 
-For the Windows PowerShell walkthrough, see the [TCP message-framing demo](TCP_MESSAGE_FRAMING_DEMO.md).
+For the Windows PowerShell walkthrough, see [demo_m4_2_tcp_message_framing](demo_m4_2_tcp_message_framing.md).
 
 ## Tests
 
