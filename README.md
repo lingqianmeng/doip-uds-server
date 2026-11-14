@@ -4,7 +4,7 @@
 
 A C++17 project for building a simulated ECU diagnostic server using DoIP (ISO 13400-2) and UDS (ISO 14229-1), with Raspberry Pi as a target platform.
 
-> **Current status:** M3.5 UDP vehicle-identification discovery and M4.1–M4.2 TCP connection and message framing are implemented. The server handles UDP discovery on port 13400 and accepts multiple concurrent TCP clients, buffering and logging complete DoIP frames. Routing activation, diagnostic-message handling, and UDS services are not implemented yet.
+> **Current status:** M3.5 UDP vehicle-identification discovery and M4.1–M4.2 TCP connection and message framing are implemented. The server handles UDP discovery on port 13400 and accepts multiple concurrent TCP clients, buffering and logging complete DoIP frames with a local 16 MiB per-frame payload limit. Routing activation, diagnostic-message handling, and UDS services are not implemented yet.
 
 ## Project layout
 
@@ -14,6 +14,9 @@ config/                 ECU configuration example
 include/doip_uds/       Public headers
 src/                    Core library implementation
 tests/unit/             GoogleTest unit tests
+tests/integration/      Network integration tests
+tools/                  Python and PowerShell demo clients
+captures/               Local Wireshark captures (pcapng files are ignored)
 CMakeLists.txt          Targets, compiler settings, and dependency setup
 CMakePresets.json       Debug/release Ninja build presets
 docs/                   Feature guides
@@ -83,6 +86,12 @@ On the Wireshark capture, the VIR has payload type `0x0001`; its VAM response
 has type `0x0004` and contains the same identity fields.
 The server only responds to identification requests; TCP routing activation
 and UDS diagnostic services are planned for later milestones.
+
+To see the TCP additions, the [M4.1 demo](docs/demo_m4_1_tcp_connections.md)
+shows TCP connections and concurrent clients alongside UDP discovery, while
+[M4.2](docs/demo_m4_2_tcp_message_framing.md) captures TCP traffic in Wireshark
+and sends messages in separate and coalesced writes, plus an oversized-length
+header. TCP payloads are framed and logged, but not yet interpreted or answered.
 
 Without presets, a debug build can be configured explicitly:
 
