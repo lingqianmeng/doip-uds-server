@@ -1,4 +1,4 @@
-# DoIP UDP discovery demo
+# demo_m3_5_udp_discovery
 
 This guide demonstrates the server's startup vehicle-announcement messages
 (VAMs) and a vehicle-identification request (VIR) followed by its VAM

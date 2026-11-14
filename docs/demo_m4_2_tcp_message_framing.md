@@ -1,7 +1,7 @@
-# TCP message-framing demo (M4.2)
+# demo_m4_2_tcp_message_framing
 
 This walkthrough demonstrates the stream framing and payload-size limit
-described in the [TCP message-framing guide](TCP_MESSAGE_FRAMING.md). The server
+described in the [m4_2_tcp_message_framing](m4_2_tcp_message_framing.md). The server
 logs complete messages but does not yet process their payloads or send DoIP
 responses.
 
@@ -44,5 +44,5 @@ configured maximum and close that client connection. The server itself should
 remain available.
 
 The 16 MiB limit is an implementation memory-safety limit, not a DoIP standard
-limit. See the [framing guide](TCP_MESSAGE_FRAMING.md) for buffering behavior,
+limit. See the [framing guide](m4_2_tcp_message_framing.md) for buffering behavior,
 error handling, and unit-test coverage.

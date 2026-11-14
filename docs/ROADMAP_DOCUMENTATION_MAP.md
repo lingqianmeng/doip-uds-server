@@ -5,19 +5,25 @@ records which merged pull requests introduced or later updated those guides.
 It is a map of the current documentation, not a promise that every PR has a
 separate document.
 
+Demo documents follow the pattern `demo_m<major>_<minor>_<topic>.md`; their
+headings use the same lowercase underscore-separated name without `.md`.
+Milestone guides follow `m<major>_<minor>_<topic>.md` with matching headings.
+For milestones without a minor number, omit that segment (for example,
+`m2_doip_header_codec.md`).
+
 ## Implemented milestones
 
 | Roadmap step | Guide | Documentation history |
 |---|---|---|
 | M1 — Project setup and CI | `README.md` | Initial project setup and build instructions were introduced in PR #1. No separate M1 guide. |
-| M2 — DoIP generic-header codec | [DoIP header codec](DOIP_HEADER_CODEC.md) | Guide added in PR #4 after implementation PR #3. |
-| M3.1 — Vehicle-identification payload codec | [Vehicle-identification codec](VEHICLE_IDENTIFICATION_CODEC.md) | Guide added with implementation PR #6; standards alignment and guide updates followed in PR #7. |
-| M3.2 — ECU identity configuration | [ECU identity configuration](ECU_IDENTITY_CONFIGURATION.md) | Guide added with implementation PR #8. |
-| M3.3 — UDP transport | [UDP transport](UDP_TRANSPORT.md) | Guide added with implementation PR #9 and expanded in documentation PR #10. |
-| M3.4 — Vehicle-identification request handler | [Vehicle-identification handler](VEHICLE_IDENTIFICATION_HANDLER.md) | Guide added with implementation PR #11 and updated in PR #12. |
-| M3.5 — UDP discovery integration and usage | [UDP transport](UDP_TRANSPORT.md), [vehicle-identification handler](VEHICLE_IDENTIFICATION_HANDLER.md), [DoIP UDP discovery demo](DOIP_DISCOVERY_DEMO.md), and [README run instructions](../README.md#build-and-test) | PR #12 updated the original guides and README; the dedicated walkthrough records the Scoop Wireshark loopback capture and VIR/VAM steps. |
-| M4.1 — TCP transport | [TCP transport](TCP_TRANSPORT.md) and [M4.1 demo variant](DOIP_DISCOVERY_DEMO_M4_1.md) | Adds the TCP listener, concurrent connection lifecycle, transport tests, and a capture/demo variant that preserves the original UDP guide. |
-| M4.2 — TCP message framing | [TCP message framing](TCP_MESSAGE_FRAMING.md) and [framing demo](TCP_MESSAGE_FRAMING_DEMO.md) | Adds bounded DoIP stream framing with tests, plus a separate PowerShell walkthrough for fragmented, coalesced, and oversized messages. |
+| M2 — DoIP generic-header codec | [m2_doip_header_codec](m2_doip_header_codec.md) | Guide added in PR #4 after implementation PR #3. |
+| M3.1 — Vehicle-identification payload codec | [m3_1_vehicle_identification_codec](m3_1_vehicle_identification_codec.md) | Guide added with implementation PR #6; standards alignment and guide updates followed in PR #7. |
+| M3.2 — ECU identity configuration | [m3_2_ecu_identity_configuration](m3_2_ecu_identity_configuration.md) | Guide added with implementation PR #8. |
+| M3.3 — UDP transport | [m3_3_udp_transport](m3_3_udp_transport.md) | Guide added with implementation PR #9 and expanded in documentation PR #10. |
+| M3.4 — Vehicle-identification request handler | [m3_4_vehicle_identification_handler](m3_4_vehicle_identification_handler.md) | Guide added with implementation PR #11 and updated in PR #12. |
+| M3.5 — UDP discovery integration and usage | [m3_3_udp_transport](m3_3_udp_transport.md), [m3_4_vehicle_identification_handler](m3_4_vehicle_identification_handler.md), [demo_m3_5_udp_discovery](demo_m3_5_udp_discovery.md), and [README run instructions](../README.md#build-and-test) | PR #12 updated the original guides and README; the dedicated walkthrough records the Scoop Wireshark loopback capture and VIR/VAM steps. |
+| M4.1 — TCP transport | [m4_1_tcp_transport](m4_1_tcp_transport.md) and [demo_m4_1_tcp_connections](demo_m4_1_tcp_connections.md) | Adds the TCP listener, concurrent connection lifecycle, transport tests, and a capture/demo variant that preserves the original UDP guide. |
+| M4.2 — TCP message framing | [m4_2_tcp_message_framing](m4_2_tcp_message_framing.md) and [demo_m4_2_tcp_message_framing](demo_m4_2_tcp_message_framing.md) | Adds bounded DoIP stream framing with tests, plus a separate PowerShell walkthrough for fragmented, coalesced, and oversized messages. |
 
 The M3 breakdown itself was recorded in the README in PR #5. The detailed
 guides explain the implementation and tests for individual features; the

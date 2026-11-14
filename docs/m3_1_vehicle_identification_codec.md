@@ -1,4 +1,4 @@
-# Vehicle-identification payload codec (M3.1)
+# m3_1_vehicle_identification_codec
 
 M3.1 adds C++ types and codecs for DoIP vehicle-identification requests and
 responses. The codec converts between typed values and payload bytes that follow
