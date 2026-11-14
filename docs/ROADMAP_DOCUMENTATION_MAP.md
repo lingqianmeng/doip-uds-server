@@ -17,7 +17,7 @@ separate document.
 | M3.4 — Vehicle-identification request handler | [Vehicle-identification handler](VEHICLE_IDENTIFICATION_HANDLER.md) | Guide added with implementation PR #11 and updated in PR #12. |
 | M3.5 — UDP discovery integration and usage | [UDP transport](UDP_TRANSPORT.md), [vehicle-identification handler](VEHICLE_IDENTIFICATION_HANDLER.md), [DoIP UDP discovery demo](DOIP_DISCOVERY_DEMO.md), and [README run instructions](../README.md#build-and-test) | PR #12 updated the original guides and README; the dedicated walkthrough records the Scoop Wireshark loopback capture and VIR/VAM steps. |
 | M4.1 — TCP transport | [TCP transport](TCP_TRANSPORT.md) and [M4.1 demo variant](DOIP_DISCOVERY_DEMO_M4_1.md) | Adds the TCP listener, concurrent connection lifecycle, transport tests, and a capture/demo variant that preserves the original UDP guide. |
-| M4.2 — TCP message framing | [TCP message framing](TCP_MESSAGE_FRAMING.md) | Adds bounded DoIP stream framing with tests for fragmented, coalesced, invalid, and oversized messages. |
+| M4.2 — TCP message framing | [TCP message framing](TCP_MESSAGE_FRAMING.md) and [framing demo](TCP_MESSAGE_FRAMING_DEMO.md) | Adds bounded DoIP stream framing with tests, plus a separate PowerShell walkthrough for fragmented, coalesced, and oversized messages. |
 
 The M3 breakdown itself was recorded in the README in PR #5. The detailed
 guides explain the implementation and tests for individual features; the

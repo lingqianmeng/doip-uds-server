@@ -29,6 +29,10 @@ The server currently logs each complete frame's payload type and total size.
 It does not interpret payloads, perform routing activation, or send protocol
 responses; those are later M4 sub-milestones.
 
+## Demo
+
+For the Windows PowerShell walkthrough, see the [TCP message-framing demo](TCP_MESSAGE_FRAMING_DEMO.md).
+
 ## Tests
 
 The TCP connection tests in `tests/unit/test_tcp_transport.cpp` cover a
