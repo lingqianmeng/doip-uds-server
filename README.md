@@ -138,9 +138,8 @@ Implement protocol logic in the core library, keeping the executable entry point
 - [ ] M9 Python tester and integration tests
 - [ ] M10 Docker, CodeQL, Trivy
 
-M3's goal is limited to discovering the simulated ECU over UDP and returning
-its configured identity. It does not include TCP diagnostic connections or
-UDS services; those are later milestones. Complete each M3 sub-milestone in
-its own feature branch and PR. The sequence keeps payload/configuration logic
-independently testable before socket I/O is added, then verifies the assembled
-behavior end to end.
+M3 completed the UDP vehicle-identification flow, from independently tested
+payload and configuration components to end-to-end discovery. M4.1 and M4.2
+add TCP transport and message framing; routing activation and
+diagnostic-message handling remain upcoming, with UDS services planned for
+later milestones.
