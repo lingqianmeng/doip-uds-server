@@ -12,9 +12,8 @@ at the same time.
 socket and records the peer IPv4 address and source port. An accepted
 connection remains open until the peer disconnects or the connection object
 is destroyed. `is_connected()` checks for peer closure without consuming any
-incoming bytes, leaving stream parsing to M4.2. If a peer closes after sending
-bytes, those queued bytes must be read before the close can be detected; M4.1
-deliberately leaves them unread because stream framing is M4.2.
+additional bytes from the socket. M4.2's `receive_message_for()` reads and
+buffers incoming DoIP frames; see the [TCP message-framing guide](TCP_MESSAGE_FRAMING.md).
 
 The listener polls with a 100 ms interval. Calling `shutdown()` causes a
 waiting `accept_for()` to return within approximately one poll interval. Socket
@@ -27,11 +26,9 @@ with `std::invalid_argument`.
 The server accepts and tracks multiple concurrent TCP clients. Each accepted
 socket has an independent `TcpConnection` lifetime; when a disconnect is
 observable, the server logs and releases that connection without dropping the
-others. M4.1 does not consume any received bytes, so a close behind queued data
-is not observable until that data is read. This milestone only establishes and
-manages TCP connections. It does not process DoIP messages, perform routing
-activation, or mark a connection as diagnostically active. Those behaviors
-are introduced by M4.2–M4.4.
+others. M4.2 frames and logs complete messages but does not interpret their
+payloads, perform routing activation, or mark a connection as diagnostically
+active. Those behaviors are introduced by M4.3–M4.4.
 
 The executable keeps UDP discovery processing on its main thread and accepts
 TCP clients on a separate thread. Ctrl+C stops the UDP loop and TCP accept

@@ -6,9 +6,11 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include <gtest/gtest.h>
 
+#include "doip_uds/doip_header.hpp"
 #include "doip_uds/udp_transport.hpp"
 
 #ifdef _WIN32
@@ -64,6 +66,27 @@ public:
         }
     }
 
+    void send_bytes(const std::vector<std::uint8_t>& bytes,
+                    std::size_t offset,
+                    std::size_t length) {
+        while (length > 0) {
+#ifdef _WIN32
+            const int sent = send(socket_,
+                                  reinterpret_cast<const char*>(bytes.data() + offset),
+                                  static_cast<int>(length),
+                                  0);
+#else
+            const auto sent = send(socket_, bytes.data() + offset, length, 0);
+#endif
+            if (sent <= 0) {
+                throw std::runtime_error("Failed to send TCP transport-test bytes");
+            }
+            const auto sent_size = static_cast<std::size_t>(sent);
+            offset += sent_size;
+            length -= sent_size;
+        }
+    }
+
     void close() noexcept {
         if (socket_ != kInvalidTestSocket) {
             close_test_socket(socket_);
@@ -74,6 +97,18 @@ public:
 private:
     TestSocket socket_;
 };
+
+std::vector<std::uint8_t> make_message(std::uint16_t payload_type,
+                                       const std::vector<std::uint8_t>& payload) {
+    const doip_uds::DoipHeader header{
+        doip_uds::kDoipProtocolVersion,
+        payload_type,
+        static_cast<std::uint32_t>(payload.size())};
+    const auto encoded_header = doip_uds::encode_doip_header(header);
+    std::vector<std::uint8_t> message(encoded_header.begin(), encoded_header.end());
+    message.insert(message.end(), payload.begin(), payload.end());
+    return message;
+}
 
 }  // namespace
 
@@ -140,6 +175,99 @@ TEST(TcpListener, TracksConcurrentClientsUntilEachDisconnects) {
 
     EXPECT_FALSE(first_connection->is_connected());
     EXPECT_TRUE(second_connection->is_connected());
+}
+
+TEST(TcpConnection, ReceivesMessageSplitAcrossHeaderAndPayload) {
+    doip_uds::TcpListener listener("127.0.0.1", 0);
+    ClientSocket client;
+    client.connect_to(listener.port());
+    auto connection = listener.accept_for(std::chrono::seconds(1));
+    ASSERT_TRUE(connection.has_value());
+
+    const auto message = make_message(0x8001, {0x10, 0x20, 0x30, 0x40});
+    client.send_bytes(message, 0, 3);
+    EXPECT_FALSE(connection->receive_message_for(std::chrono::milliseconds(20)).has_value());
+
+    client.send_bytes(message, 3, 7);
+    EXPECT_FALSE(connection->receive_message_for(std::chrono::milliseconds(20)).has_value());
+
+    client.send_bytes(message, 10, message.size() - 10);
+    const auto received = connection->receive_message_for(std::chrono::seconds(1));
+    ASSERT_TRUE(received.has_value());
+    EXPECT_EQ(*received, message);
+}
+
+TEST(TcpConnection, SeparatesMultipleMessagesReceivedTogether) {
+    doip_uds::TcpListener listener("127.0.0.1", 0);
+    ClientSocket client;
+    client.connect_to(listener.port());
+    auto connection = listener.accept_for(std::chrono::seconds(1));
+    ASSERT_TRUE(connection.has_value());
+
+    const auto first_message = make_message(0x8001, {0xAA, 0xBB});
+    const auto second_message = make_message(0x8002, {});
+    auto combined = first_message;
+    combined.insert(combined.end(), second_message.begin(), second_message.end());
+    client.send_bytes(combined, 0, combined.size());
+
+    const auto first_received = connection->receive_message_for(std::chrono::seconds(1));
+    const auto second_received = connection->receive_message_for(std::chrono::milliseconds(0));
+    ASSERT_TRUE(first_received.has_value());
+    ASSERT_TRUE(second_received.has_value());
+    EXPECT_EQ(*first_received, first_message);
+    EXPECT_EQ(*second_received, second_message);
+}
+
+TEST(TcpConnection, RejectsInvalidGenericHeader) {
+    doip_uds::TcpListener listener("127.0.0.1", 0);
+    ClientSocket client;
+    client.connect_to(listener.port());
+    auto connection = listener.accept_for(std::chrono::seconds(1));
+    ASSERT_TRUE(connection.has_value());
+
+    auto invalid_header = doip_uds::encode_doip_header(
+        {doip_uds::kDoipProtocolVersion, 0x8001, 0});
+    invalid_header[1] ^= 0x01;
+    const std::vector<std::uint8_t> invalid_message(
+        invalid_header.begin(), invalid_header.end());
+    client.send_bytes(invalid_message, 0, invalid_message.size());
+
+    EXPECT_THROW(connection->receive_message_for(std::chrono::seconds(1)),
+                 std::runtime_error);
+}
+
+TEST(TcpConnection, RejectsPayloadLengthAboveConfiguredLimit) {
+    doip_uds::TcpListener listener("127.0.0.1", 0);
+    ClientSocket client;
+    client.connect_to(listener.port());
+    auto connection = listener.accept_for(std::chrono::seconds(1));
+    ASSERT_TRUE(connection.has_value());
+
+    const auto header = doip_uds::encode_doip_header(
+        {doip_uds::kDoipProtocolVersion,
+         0x8001,
+         static_cast<std::uint32_t>(doip_uds::kMaxDoipTcpPayloadSize + 1)});
+    const std::vector<std::uint8_t> oversized_header(header.begin(), header.end());
+    client.send_bytes(oversized_header, 0, oversized_header.size());
+
+    EXPECT_THROW(connection->receive_message_for(std::chrono::seconds(1)),
+                 std::length_error);
+}
+
+TEST(TcpConnection, RejectsPeerCloseDuringIncompleteMessage) {
+    doip_uds::TcpListener listener("127.0.0.1", 0);
+    ClientSocket client;
+    client.connect_to(listener.port());
+    auto connection = listener.accept_for(std::chrono::seconds(1));
+    ASSERT_TRUE(connection.has_value());
+
+    const auto message = make_message(0x8001, {0x10, 0x20});
+    client.send_bytes(message, 0, 5);
+    EXPECT_FALSE(connection->receive_message_for(std::chrono::milliseconds(20)).has_value());
+    client.close();
+
+    EXPECT_THROW(connection->receive_message_for(std::chrono::seconds(1)),
+                 std::runtime_error);
 }
 
 TEST(TcpListener, RejectsInvalidBindAddress) {

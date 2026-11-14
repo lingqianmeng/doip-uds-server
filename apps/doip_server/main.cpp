@@ -2,14 +2,17 @@
 #include <atomic>
 #include <chrono>
 #include <csignal>
+#include <cstddef>
 #include <exception>
 #include <iomanip>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
 
 #include "doip_uds/ecu_identity.hpp"
+#include "doip_uds/doip_header.hpp"
 #include "doip_uds/tcp_transport.hpp"
 #include "doip_uds/udp_transport.hpp"
 #include "doip_uds/version.hpp"
@@ -39,9 +42,41 @@ void accept_tcp_connections(doip_uds::TcpListener& listener,
         connections.erase(
             std::remove_if(connections.begin(),
                            connections.end(),
-                           [](const doip_uds::TcpConnection& active_connection) {
-                               if (active_connection.is_connected()) {
-                                   return false;
+                           [](doip_uds::TcpConnection& active_connection) {
+                               try {
+                                   constexpr std::size_t kMaxFramesPerClientPerIteration = 32;
+                                   for (std::size_t frame_index = 0;
+                                        frame_index < kMaxFramesPerClientPerIteration;
+                                        ++frame_index) {
+                                       const auto message =
+                                           active_connection.receive_message_for(
+                                               std::chrono::milliseconds::zero());
+                                       if (!message) {
+                                           break;
+                                       }
+                                       const auto header =
+                                           doip_uds::decode_doip_header(message->data(),
+                                                                        message->size());
+                                       if (!header) {
+                                           throw std::runtime_error(
+                                               "framed message has an invalid generic header");
+                                       }
+                                       std::cout << "[TCP] Received DoIP frame from "
+                                                 << active_connection.peer_address() << ':'
+                                                 << active_connection.peer_port() << " type=0x"
+                                                 << std::hex << std::uppercase << std::setw(4)
+                                                 << header->payload_type << std::dec
+                                                 << " bytes=" << message->size() << '\n';
+                                   }
+                                   if (active_connection.is_connected()) {
+                                       return false;
+                                   }
+                               } catch (const std::exception& error) {
+                                   std::cerr << "[TCP] Closing client "
+                                             << active_connection.peer_address() << ':'
+                                             << active_connection.peer_port() << ": "
+                                             << error.what() << '\n';
+                                   return true;
                                }
                                std::cout << "[TCP] Client " << active_connection.peer_address()
                                          << ':' << active_connection.peer_port()

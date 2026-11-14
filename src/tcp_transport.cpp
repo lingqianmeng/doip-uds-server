@@ -1,12 +1,15 @@
 #include "doip_uds/tcp_transport.hpp"
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cerrno>
 #include <chrono>
 #include <stdexcept>
 #include <system_error>
 #include <utility>
+
+#include "doip_uds/doip_header.hpp"
 
 #ifdef _WIN32
 #ifndef NOMINMAX
@@ -30,6 +33,7 @@ namespace doip_uds {
 namespace {
 
 constexpr auto kAcceptPollInterval = std::chrono::milliseconds(100);
+constexpr std::size_t kTcpReadBufferSize = 4096;
 
 int last_socket_error() noexcept {
 #ifdef _WIN32
@@ -60,6 +64,8 @@ struct TcpConnection::Impl {
     SocketHandle socket{kInvalidSocket};
     std::string remote_address;
     std::uint16_t remote_port{};
+    std::vector<std::uint8_t> receive_buffer;
+    bool peer_closed{false};
 #ifdef _WIN32
     bool winsock_started{false};
 #endif
@@ -237,6 +243,9 @@ bool TcpConnection::is_connected() const {
     if (!impl_ || impl_->socket == kInvalidSocket) {
         return false;
     }
+    if (!impl_->receive_buffer.empty()) {
+        return true;
+    }
 
     fd_set read_set;
     FD_ZERO(&read_set);
@@ -289,6 +298,122 @@ bool TcpConnection::is_connected() const {
     }
 #endif
     throw_socket_error("recv(MSG_PEEK)", error);
+}
+
+std::optional<std::vector<std::uint8_t>> TcpConnection::receive_message_for(
+    std::chrono::milliseconds timeout) {
+    if (timeout < std::chrono::milliseconds::zero()) {
+        throw std::invalid_argument("receive timeout cannot be negative");
+    }
+    if (!impl_ || impl_->socket == kInvalidSocket) {
+        return std::nullopt;
+    }
+
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    std::array<char, kTcpReadBufferSize> incoming{};
+    while (true) {
+        if (impl_->receive_buffer.size() >= kDoipGenericHeaderSize) {
+            const auto header =
+                decode_doip_header(impl_->receive_buffer.data(), impl_->receive_buffer.size());
+            if (!header) {
+                throw std::runtime_error("invalid DoIP generic header");
+            }
+            if (header->payload_length > kMaxDoipTcpPayloadSize) {
+                throw std::length_error("DoIP TCP payload exceeds the configured maximum");
+            }
+
+            const auto message_size =
+                kDoipGenericHeaderSize + static_cast<std::size_t>(header->payload_length);
+            if (impl_->receive_buffer.size() >= message_size) {
+                const auto message_end =
+                    impl_->receive_buffer.begin() +
+                    static_cast<std::vector<std::uint8_t>::difference_type>(message_size);
+                std::vector<std::uint8_t> message(impl_->receive_buffer.begin(), message_end);
+                impl_->receive_buffer.erase(impl_->receive_buffer.begin(), message_end);
+                return message;
+            }
+        }
+
+        if (impl_->peer_closed) {
+            if (impl_->receive_buffer.empty()) {
+                return std::nullopt;
+            }
+            throw std::runtime_error("TCP peer closed before a complete DoIP message was received");
+        }
+
+        fd_set read_set;
+        FD_ZERO(&read_set);
+        FD_SET(impl_->socket, &read_set);
+        const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
+            deadline - std::chrono::steady_clock::now());
+        const auto wait_duration =
+            std::max(std::chrono::milliseconds::zero(),
+                     std::min(kAcceptPollInterval, remaining));
+        timeval wait_time{};
+        wait_time.tv_sec = static_cast<long>(wait_duration.count() / 1000);
+        wait_time.tv_usec = static_cast<long>((wait_duration.count() % 1000) * 1000);
+
+#ifdef _WIN32
+        const int ready = select(0, &read_set, nullptr, nullptr, &wait_time);
+#else
+        const int ready = select(impl_->socket + 1, &read_set, nullptr, nullptr, &wait_time);
+#endif
+        if (ready == 0) {
+            if (std::chrono::steady_clock::now() >= deadline) {
+                return std::nullopt;
+            }
+            continue;
+        }
+        if (ready < 0) {
+#ifndef _WIN32
+            if (errno == EINTR) {
+                continue;
+            }
+#endif
+            throw_socket_error("select", last_socket_error());
+        }
+
+#ifdef _WIN32
+        const int received = recv(impl_->socket,
+                                  incoming.data(),
+                                  static_cast<int>(incoming.size()),
+                                  0);
+#else
+        const auto received =
+            recv(impl_->socket, incoming.data(), incoming.size(), 0);
+#endif
+        if (received > 0) {
+            const auto* bytes = reinterpret_cast<const std::uint8_t*>(incoming.data());
+            impl_->receive_buffer.insert(
+                impl_->receive_buffer.end(), bytes, bytes + static_cast<std::size_t>(received));
+            continue;
+        }
+        if (received == 0) {
+            impl_->peer_closed = true;
+            continue;
+        }
+
+        const int error = last_socket_error();
+#ifdef _WIN32
+        if (error == WSAEWOULDBLOCK) {
+            if (std::chrono::steady_clock::now() >= deadline) {
+                return std::nullopt;
+            }
+            continue;
+        }
+#else
+        if (error == EINTR) {
+            continue;
+        }
+        if (error == EAGAIN || error == EWOULDBLOCK) {
+            if (std::chrono::steady_clock::now() >= deadline) {
+                return std::nullopt;
+            }
+            continue;
+        }
+#endif
+        throw_socket_error("recv", error);
+    }
 }
 
 const std::string& TcpConnection::peer_address() const noexcept {

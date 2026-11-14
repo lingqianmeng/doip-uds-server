@@ -1,14 +1,17 @@
 #pragma once
 
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace doip_uds {
 
 inline constexpr std::uint16_t kDoipTcpPort = 13400;
+inline constexpr std::size_t kMaxDoipTcpPayloadSize = 16U * 1024U * 1024U;
 
 class TcpConnection {
 public:
@@ -19,9 +22,16 @@ public:
     TcpConnection(TcpConnection&&) noexcept;
     TcpConnection& operator=(TcpConnection&&) noexcept;
 
-    /// Returns false after the peer closes and all queued bytes have been read.
-    /// Incoming bytes are only peeked at and remain unread for later processing.
+    /// Returns false after the peer closes and all buffered bytes are consumed.
+    /// This check does not read additional bytes from the socket.
     bool is_connected() const;
+
+    /// Reads one complete DoIP message from the TCP stream.
+    /// Returns nullopt on timeout or a clean peer close. Invalid or oversized
+    /// headers and peer closure during a message throw; socket failures throw
+    /// std::system_error.
+    std::optional<std::vector<std::uint8_t>> receive_message_for(
+        std::chrono::milliseconds timeout);
 
     /// Returns the remote IPv4 address and TCP source port.
     const std::string& peer_address() const noexcept;
