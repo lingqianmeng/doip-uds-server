@@ -101,6 +101,7 @@ udp.port == 13400 || tcp.port == 13400
 ```
 
 You should see the UDP startup VAMs and VIR/VAM exchange, plus the TCP
-three-way handshake and connection close. The TCP connection carries **no
-DoIP messages yet**: routing activation is planned for M4.3. To focus only on
-the new TCP activity, use `tcp.port == 13400`.
+three-way handshake and connection close. This M4.1 demo's TCP helper sends no
+application payload; M4.2 stream framing is described in the
+[TCP message-framing guide](TCP_MESSAGE_FRAMING.md), and routing activation is
+planned for M4.3. To focus only on the TCP activity, use `tcp.port == 13400`.
