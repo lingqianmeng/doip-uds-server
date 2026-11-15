@@ -26,6 +26,7 @@ For milestones without a minor number, omit that segment (for example,
 | M4.2 — TCP message framing | [m4_2_tcp_message_framing](m4_2_tcp_message_framing.md) and [demo_m4_2_tcp_message_framing](demo_m4_2_tcp_message_framing.md) | Adds bounded DoIP stream framing with tests, plus its own PowerShell walkthrough for fragmented, coalesced, and oversized messages. |
 | M4.3 — Routing activation | [m4_3_routing_activation](m4_3_routing_activation.md) and [demo_m4_3_routing_activation](demo_m4_3_routing_activation.md) | Adds version-0x02 routing-activation codecs, per-connection state, response policy, TCP connection-level tests, and a dedicated activation demo. |
 | M4.4 — Diagnostic-message transport | [m4_4_diagnostic_message_transport](m4_4_diagnostic_message_transport.md) and [demo_m4_4_diagnostic_message_transport](demo_m4_4_diagnostic_message_transport.md) | Adds activated-session and logical-address checks, diagnostic ACK/NACK responses, preserved UDS payload handoff, tests, and a dedicated transport demo. |
+| M4.5 — TCP diagnostic flow integration and usage | [m4_5_tcp_diagnostic_flow](m4_5_tcp_diagnostic_flow.md) and [demo_m4_5_tcp_diagnostic_flow](demo_m4_5_tcp_diagnostic_flow.md) | Verifies activation and diagnostic ACK on one TCP connection with an integration test and dedicated live demo. |
 
 The M3 breakdown itself was recorded in the README in PR #5. The detailed
 guides explain the implementation and tests for individual features; the
@@ -33,11 +34,10 @@ README remains the top-level overview and setup guide.
 
 ## Upcoming roadmap steps
 
-M4 is in progress: M4.1–M4.4 are complete and have guides, while M4.5
-remains unchecked. M5–M10 are upcoming. When a step is implemented, add or
-update its guide and update this table in the same PR. A dedicated guide is
-useful when a feature needs more explanation than belongs in the README; it
-does not need to be created for every small PR.
+M4.1–M4.5 are complete and have guides. M5–M10 are upcoming. When a step is
+implemented, add or update its guide and update this table in the same PR. A
+dedicated guide is useful when a feature needs more explanation than belongs
+in the README; it does not need to be created for every small PR.
 
 ## How to verify the history
 

@@ -4,7 +4,7 @@
 
 A C++17 project for building a simulated ECU diagnostic server using DoIP (ISO 13400-2) and UDS (ISO 14229-1), with Raspberry Pi as a target platform.
 
-> **Current status:** M3.5 UDP vehicle-identification discovery and M4.1–M4.4 TCP connection, message framing, routing activation, and diagnostic-message transport are implemented. The server handles UDP discovery on port 13400 and accepts multiple concurrent TCP clients, with a local 16 MiB per-frame payload limit. UDS services are not implemented yet.
+> **Current status:** M3.5 UDP vehicle-identification discovery and M4.1–M4.5 TCP connection, message framing, routing activation, diagnostic-message transport, and integrated usage are implemented. The server handles UDP discovery on port 13400 and accepts multiple concurrent TCP clients, with a local 16 MiB per-frame payload limit. UDS services are not implemented yet.
 
 ## Project layout
 
@@ -96,6 +96,9 @@ The dedicated [M4.3 demo](docs/demo_m4_3_routing_activation.md) checks routing
 activation success and rejection responses over separate TCP connections. The
 [M4.4 demo](docs/demo_m4_4_diagnostic_message_transport.md) checks diagnostic
 message ACK/NACK behavior after activation.
+The [M4.5 demo](docs/demo_m4_5_tcp_diagnostic_flow.md) captures startup VAMs
+and a VIR/VAM discovery exchange alongside the connect → activation →
+diagnostic-message ACK exchange on one TCP connection.
 
 Without presets, a debug build can be configured explicitly:
 
@@ -113,7 +116,7 @@ ctest --test-dir build/debug --output-on-failure
 4. With `DOIP_BUILD_TESTS=ON` (the default), it finds or downloads GoogleTest, creates `unit_tests` from `tests/unit/` and `integration_tests` from `tests/integration/`, and registers both with CTest.
 5. Ninja executes the generated compile and link steps. CTest runs the registered tests.
 
-The core library currently exposes `doip_uds::version()`, DoIP generic-header, vehicle-identification, routing-activation, and diagnostic-message codecs, ECU identity configuration loading, IPv4 UDP and TCP listeners, bounded TCP message framing, per-connection routing-activation state, diagnostic-message address policy, a vehicle-identification datagram handler, and the UDP request/response service. The executable handles UDP discovery, TCP routing activation, and diagnostic-message ACK/NACK responses; it preserves accepted UDS bytes without interpreting services. M3.1 and M3.2 standards-specific checks are based on the project's local reference copy of ISO 13400-2:2012(E). M4.3 and M4.4 implement version-0x02 message formats and selected address policies; they do not claim complete conformance to this or later editions. See [`docs/m3_2_ecu_identity_configuration.md`](docs/m3_2_ecu_identity_configuration.md), [`docs/m3_3_udp_transport.md`](docs/m3_3_udp_transport.md), [`docs/m4_1_tcp_transport.md`](docs/m4_1_tcp_transport.md), [`docs/m4_2_tcp_message_framing.md`](docs/m4_2_tcp_message_framing.md), [`docs/m4_3_routing_activation.md`](docs/m4_3_routing_activation.md), [`docs/m4_4_diagnostic_message_transport.md`](docs/m4_4_diagnostic_message_transport.md), and [`docs/m3_4_vehicle_identification_handler.md`](docs/m3_4_vehicle_identification_handler.md) for implementation details.
+The core library currently exposes `doip_uds::version()`, DoIP generic-header, vehicle-identification, routing-activation, and diagnostic-message codecs, ECU identity configuration loading, IPv4 UDP and TCP listeners, bounded TCP message framing, per-connection routing-activation state, diagnostic-message address policy, a vehicle-identification datagram handler, and the UDP request/response service. The executable handles UDP discovery, TCP routing activation, and diagnostic-message ACK/NACK responses; it preserves accepted UDS bytes without interpreting services. M3.1 and M3.2 standards-specific checks are based on the project's local reference copy of ISO 13400-2:2012(E). M4.3 and M4.4 implement version-0x02 message formats and selected address policies; they do not claim complete conformance to this or later editions. See [`docs/m3_2_ecu_identity_configuration.md`](docs/m3_2_ecu_identity_configuration.md), [`docs/m3_3_udp_transport.md`](docs/m3_3_udp_transport.md), [`docs/m4_1_tcp_transport.md`](docs/m4_1_tcp_transport.md), [`docs/m4_2_tcp_message_framing.md`](docs/m4_2_tcp_message_framing.md), [`docs/m4_3_routing_activation.md`](docs/m4_3_routing_activation.md), [`docs/m4_4_diagnostic_message_transport.md`](docs/m4_4_diagnostic_message_transport.md), [`docs/m4_5_tcp_diagnostic_flow.md`](docs/m4_5_tcp_diagnostic_flow.md), and [`docs/m3_4_vehicle_identification_handler.md`](docs/m3_4_vehicle_identification_handler.md) for implementation details.
 
 ## Development direction
 
@@ -134,7 +137,7 @@ Implement protocol logic in the core library, keeping the executable entry point
   - [x] **M4.2 — TCP message framing:** assemble complete DoIP messages from the TCP byte stream using the generic header. **Done when:** fragmented headers/payloads, multiple messages in one read, and invalid or oversized lengths are handled and tested. See the [m4_2_tcp_message_framing](docs/m4_2_tcp_message_framing.md) and [demo_m4_2_tcp_message_framing](docs/demo_m4_2_tcp_message_framing.md).
   - [x] **M4.3 — Routing activation:** encode/decode Routing Activation Request (`0x0005`) and Response (`0x0006`), apply the selected Default-activation and test-equipment-address policies, and track activation per connection. The server rejects unsupported activation types and duplicate active addresses. See the [m4_3_routing_activation](docs/m4_3_routing_activation.md).
   - [x] **M4.4 — Diagnostic-message transport:** accept Diagnostic Messages (`0x8001`) only after activation, require the source to match the active tester and the target to match the configured ECU, and send ACK (`0x8002`) or NACK (`0x8003`) responses. Accepted UDS bytes remain uninterpreted and available to a future UDS layer. See the [m4_4_diagnostic_message_transport](docs/m4_4_diagnostic_message_transport.md) and [demo_m4_4_diagnostic_message_transport](docs/demo_m4_4_diagnostic_message_transport.md).
-  - [ ] **M4.5 — Integration and usage:** verify the TCP connect → routing activation → diagnostic-message flow end to end and document a demo. **Done when:** automated integration tests cover the flow and the demo shows the activation and diagnostic acknowledgment exchange.
+  - [x] **M4.5 — Integration and usage:** verify TCP connect → routing activation → diagnostic-message flow on one connection and document the live exchange. The integration test checks the routing response, diagnostic ACK, and preserved UDS bytes. See the [m4_5_tcp_diagnostic_flow](docs/m4_5_tcp_diagnostic_flow.md) and [demo_m4_5_tcp_diagnostic_flow](docs/demo_m4_5_tcp_diagnostic_flow.md).
 - [ ] M5 UDS dispatcher, 0x10 / 0x3E / 0x11
 - [ ] M6 0x22 / 0x2E
 - [ ] M7 0x19 / 0x14
@@ -143,6 +146,7 @@ Implement protocol logic in the core library, keeping the executable entry point
 - [ ] M10 Docker, CodeQL, Trivy
 
 M3 completed the UDP vehicle-identification flow, from independently tested
-payload and configuration components to end-to-end discovery. M4.1–M4.4 add
-TCP transport, message framing, routing activation, and diagnostic-message
-acknowledgement. Full UDS service handling remains an upcoming milestone.
+payload and configuration components to end-to-end discovery. M4.1–M4.5 add
+TCP transport, message framing, routing activation, diagnostic-message
+acknowledgement, and the integrated TCP diagnostic flow. Full UDS service
+handling remains an upcoming milestone.
