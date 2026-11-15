@@ -35,8 +35,8 @@ field in its responses.
 - Invalid routing-activation payload sizes or unsupported DoIP protocol
   versions close only the affected TCP connection.
 
-Routing activation state is released when its TCP connection closes. M4.4
-will use that state to gate diagnostic messages and send ACK/NACK responses.
+Routing activation state is released when its TCP connection closes. M4.4 uses
+that state to gate diagnostic messages and send ACK/NACK responses.
 
 ## Tests and demo
 

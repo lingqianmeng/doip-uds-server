@@ -26,9 +26,9 @@ with `std::invalid_argument`.
 The server accepts and tracks multiple concurrent TCP clients. Each accepted
 socket has an independent `TcpConnection` lifetime; when a disconnect is
 observable, the server logs and releases that connection without dropping the
-others. M4.2 adds framing, and M4.3 handles routing activation and tracks the
-tester address per connection. Diagnostic-message handling is introduced by
-M4.4.
+others. M4.2 adds framing, M4.3 handles routing activation and tracks the
+tester address per connection, and M4.4 gates diagnostic messages on that
+activation state.
 
 The executable keeps UDP discovery processing on its main thread and accepts
 TCP clients on a separate thread. Ctrl+C stops the UDP loop and TCP accept
