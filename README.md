@@ -96,8 +96,9 @@ The dedicated [M4.3 demo](docs/demo_m4_3_routing_activation.md) checks routing
 activation success and rejection responses over separate TCP connections. The
 [M4.4 demo](docs/demo_m4_4_diagnostic_message_transport.md) checks diagnostic
 message ACK/NACK behavior after activation.
-The [M4.5 demo](docs/demo_m4_5_tcp_diagnostic_flow.md) shows the complete
-connect → activation → diagnostic-message ACK exchange on one TCP connection.
+The [M4.5 demo](docs/demo_m4_5_tcp_diagnostic_flow.md) captures startup VAMs
+and a VIR/VAM discovery exchange alongside the connect → activation →
+diagnostic-message ACK exchange on one TCP connection.
 
 Without presets, a debug build can be configured explicitly:
 

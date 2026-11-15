@@ -32,7 +32,7 @@ if ($response.Length -ne 41 -or
 }
 
 $vin = [System.Text.Encoding]::ASCII.GetString($response, 8, 17)
-$logicalAddress = ($response[25] -shl 8) -bor $response[26]
+$logicalAddress = ([int]$response[25] -shl 8) -bor [int]$response[26]
 $eid = [BitConverter]::ToString($response[27..32])
 $gid = [BitConverter]::ToString($response[33..38])
 Write-Output "VIR sent to ${Destination}:$Port"
