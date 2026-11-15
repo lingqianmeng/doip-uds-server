@@ -20,6 +20,7 @@ target_link_libraries(unit_tests PRIVATE doip_uds_core project_warnings GTest::g
 gtest_discover_tests(unit_tests)
 
 add_executable(integration_tests
+  integration/test_diagnostic_flow_tcp.cpp
   integration/test_diagnostic_message_tcp.cpp
   integration/test_routing_activation_tcp.cpp
   integration/test_vehicle_identification_udp.cpp
