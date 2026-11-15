@@ -26,17 +26,17 @@ function Wait-ForRemoteClose {
     return $false
 }
 
-$routingActivation = [byte[]](
-    0x02, 0xfd, 0x00, 0x05, 0x00, 0x00, 0x00, 0x07,
-    0x0e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+$splitMessage = [byte[]](
+    0x02, 0xfd, 0x90, 0x00, 0x00, 0x00, 0x00, 0x06,
+    0xde, 0xad, 0xbe, 0xef, 0x00, 0x01
 )
-$diagnosticTesterPresent = [byte[]](
-    0x02, 0xfd, 0x80, 0x01, 0x00, 0x00, 0x00, 0x06,
-    0x0e, 0x00, 0x00, 0x01, 0x3e, 0x00
+$coalescedMessageOne = [byte[]](
+    0x02, 0xfd, 0x90, 0x00, 0x00, 0x00, 0x00, 0x06,
+    0xca, 0xfe, 0xba, 0xbe, 0x00, 0x02
 )
-$diagnosticSessionControl = [byte[]](
-    0x02, 0xfd, 0x80, 0x01, 0x00, 0x00, 0x00, 0x06,
-    0x0e, 0x00, 0x00, 0x01, 0x10, 0x01
+$coalescedMessageTwo = [byte[]](
+    0x02, 0xfd, 0x90, 0x00, 0x00, 0x00, 0x00, 0x06,
+    0xba, 0xdc, 0x0f, 0xfe, 0x00, 0x03
 )
 
 $normalClient = [System.Net.Sockets.TcpClient]::new()
@@ -49,18 +49,17 @@ try {
 
     $normalClient.NoDelay = $true
     $stream = $normalClient.GetStream()
-
-    $stream.Write($routingActivation, 0, 3)
+    $stream.Write($splitMessage, 0, 3)
     $stream.Flush()
     Start-Sleep -Milliseconds 150
-    $stream.Write($routingActivation, 3, $routingActivation.Length - 3)
+    $stream.Write($splitMessage, 3, $splitMessage.Length - 3)
     $stream.Flush()
-    Write-Output "Sent one routing-activation-shaped message in two TCP writes."
+    Write-Output "Sent one generic DoIP frame in two TCP writes."
 
-    $coalescedMessages = [byte[]]($diagnosticTesterPresent + $diagnosticSessionControl)
+    $coalescedMessages = [byte[]]($coalescedMessageOne + $coalescedMessageTwo)
     $stream.Write($coalescedMessages, 0, $coalescedMessages.Length)
     $stream.Flush()
-    Write-Output "Sent two complete diagnostic-shaped messages in one TCP write."
+    Write-Output "Sent two complete generic DoIP frames in one TCP write."
     Write-Output "No protocol response is expected; this milestone demonstrates framing only."
 
     Start-Sleep -Milliseconds 300
@@ -79,7 +78,7 @@ $lengthBytes = [byte[]]@(
     [byte](($oversizedPayloadLength -shr 8) -band 0xff),
     [byte]($oversizedPayloadLength -band 0xff)
 )
-$oversizedHeader = [byte[]](@(0x02, 0xfd, 0x00, 0x05) + $lengthBytes)
+$oversizedHeader = [byte[]](@(0x02, 0xfd, 0x90, 0x00) + $lengthBytes)
 $oversizedClient = [System.Net.Sockets.TcpClient]::new()
 try {
     try {

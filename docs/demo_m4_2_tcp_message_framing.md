@@ -1,9 +1,9 @@
 # demo_m4_2_tcp_message_framing
 
 This walkthrough demonstrates the stream framing and payload-size limit
-described in the [m4_2_tcp_message_framing](m4_2_tcp_message_framing.md). The server
-logs complete messages but does not yet process their payloads or send DoIP
-responses.
+described in the [m4_2_tcp_message_framing](m4_2_tcp_message_framing.md). It
+uses generic payload type `0x9000` frames to focus on TCP framing without
+mixing in behavior from later milestones.
 
 ## Run the demo
 
@@ -51,12 +51,11 @@ the server with **Ctrl+C** in Terminal 2.
 
 ## What to observe
 
-The script sends one routing-activation-shaped DoIP message in two TCP writes,
-then sends two diagnostic-shaped messages in one write. TCP may combine or
-split writes; the server should still log three complete frames with payload
-types `0x0005` and `0x8001`. These are sample framed messages only: routing
-activation and diagnostic handling are not implemented yet, so no protocol
-responses are expected.
+The script sends one generic DoIP frame in two TCP writes, then sends two
+complete generic frames in one write. The server should log all three frames
+with payload type `0x9000` and send no protocol responses. TCP may combine or
+split the client's writes, but the DoIP frames should still be assembled
+correctly.
 
 Next, the script opens a separate connection and sends a generic header
 declaring a payload of 16 MiB + 1 byte. It sends only the header, not the
@@ -83,9 +82,8 @@ tcp.port == 13400
 ```
 
 The trace includes the TCP connections and message bytes sent by the demo.
-Inspect packet data for the generic headers: `02 FD 00 05` for the
-routing-activation-shaped message, `02 FD 80 01` for the two
-diagnostic-shaped messages, and `02 FD 00 05 01 00 00 01` for the oversized
+Inspect packet data for the generic headers: `02 FD 90 00` for the three
+generic frames and `02 FD 90 00 01 00 00 01` for the oversized
 length declaration. TCP packet boundaries may not match the demo's write
 boundaries; use **Follow → TCP Stream** to view the connection's reassembled
 byte stream.

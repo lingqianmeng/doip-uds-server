@@ -48,6 +48,7 @@ endif()
 add_library(doip_uds_core
   src/doip_header.cpp
   src/ecu_identity.cpp
+  src/routing_activation.cpp
   src/tcp_transport.cpp
   src/udp_transport.cpp
   src/vehicle_identification.cpp

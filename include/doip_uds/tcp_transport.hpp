@@ -33,6 +33,10 @@ public:
     std::optional<std::vector<std::uint8_t>> receive_message_for(
         std::chrono::milliseconds timeout);
 
+    /// Sends one complete DoIP message, handling partial socket writes.
+    void send_message(std::uint16_t payload_type,
+                      const std::vector<std::uint8_t>& payload);
+
     /// Returns the remote IPv4 address and TCP source port.
     const std::string& peer_address() const noexcept;
     std::uint16_t peer_port() const noexcept;

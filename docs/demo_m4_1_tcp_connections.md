@@ -102,6 +102,9 @@ udp.port == 13400 || tcp.port == 13400
 
 You should see the UDP startup VAMs and VIR/VAM exchange, plus the TCP
 three-way handshake and connection close. This M4.1 demo's TCP helper sends no
-application payload; M4.2 stream framing is described in the
-[m4_2_tcp_message_framing](m4_2_tcp_message_framing.md), and routing activation is
-planned for M4.3. To focus only on the TCP activity, use `tcp.port == 13400`.
+application payload. M4.2 stream framing is described in the
+[m4_2_tcp_message_framing](m4_2_tcp_message_framing.md); routing activation is
+implemented in M4.3 as described in
+[m4_3_routing_activation](m4_3_routing_activation.md). Diagnostic-message
+handling is planned for M4.4. To focus only on the TCP activity, use
+`tcp.port == 13400`.
