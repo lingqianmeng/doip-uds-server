@@ -132,7 +132,7 @@ Implement protocol logic in the core library, keeping the executable entry point
   - [x] **M3.3 — UDP transport:** create a cross-platform UDP listener on the DoIP port (13400), separate from protocol handling. **Done when:** it can bind, receive datagrams, report bind/receive errors, and shut down cleanly; transport behavior has tests where practical.
   - [x] **M3.4 — Request handling:** connect datagrams, generic-header parsing, M3.1 payload decoding, and the configured identity. **Done when:** valid broadcast and matching VIN/EID requests produce a correctly framed vehicle-identification response, while malformed or non-matching requests do not produce a response.
   - [x] **M3.5 — Integration and usage:** demonstrate startup vehicle announcements and client discovery. **Done when:** an automated integration test verifies UDP request/response; startup sends three broadcast VAMs; and the README and [demo_m3_5_udp_discovery](docs/demo_m3_5_udp_discovery.md) cover startup, packet capture, and the VIR/VAM demo client.
-- [ ] M4 TCP routing activation and diagnostic messages
+- [x] M4 TCP routing activation and diagnostic messages
   - [x] **M4.1 — TCP transport:** add a cross-platform TCP listener on DoIP port 13400 and manage accepted connections. **Done when:** connection lifecycle and shutdown are tested, and the supported client/session policy is documented. See the [m4_1_tcp_transport](docs/m4_1_tcp_transport.md) and [demo_m4_1_tcp_connections](docs/demo_m4_1_tcp_connections.md).
   - [x] **M4.2 — TCP message framing:** assemble complete DoIP messages from the TCP byte stream using the generic header. **Done when:** fragmented headers/payloads, multiple messages in one read, and invalid or oversized lengths are handled and tested. See the [m4_2_tcp_message_framing](docs/m4_2_tcp_message_framing.md) and [demo_m4_2_tcp_message_framing](docs/demo_m4_2_tcp_message_framing.md).
   - [x] **M4.3 — Routing activation:** encode/decode Routing Activation Request (`0x0005`) and Response (`0x0006`), apply the selected Default-activation and test-equipment-address policies, and track activation per connection. The server rejects unsupported activation types and duplicate active addresses. See the [m4_3_routing_activation](docs/m4_3_routing_activation.md).
@@ -146,7 +146,7 @@ Implement protocol logic in the core library, keeping the executable entry point
 - [ ] M10 Docker, CodeQL, Trivy
 
 M3 completed the UDP vehicle-identification flow, from independently tested
-payload and configuration components to end-to-end discovery. M4.1–M4.5 add
-TCP transport, message framing, routing activation, diagnostic-message
-acknowledgement, and the integrated TCP diagnostic flow. Full UDS service
-handling remains an upcoming milestone.
+payload and configuration components to end-to-end discovery. M4.1–M4.5 are
+complete, adding TCP transport, message framing, routing activation,
+diagnostic-message acknowledgement, and the integrated TCP diagnostic flow.
+Full UDS service handling remains an upcoming milestone.
