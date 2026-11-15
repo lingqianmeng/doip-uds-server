@@ -46,16 +46,22 @@ finishes.
 
 ## What to observe
 
-The script expects these Routing Activation Response codes:
+The first TCP connection activates tester `0x0E00` with Default activation.
+The script keeps it open while a second connection checks duplicate-address
+handling. Each request should receive:
 
-| Request | Expected code |
-|---|---:|
-| Default activation (`0x00`) for tester `0x0E00` | `0x10` — activated |
-| New tester address on the already activated connection | `0x02` — different source address |
-| Unsupported activation type (`0x01`) | `0x06` — unsupported type |
-| Tester `0x0E00` on the second connection | `0x03` — address active elsewhere |
-| Distinct tester `0x0E01` on the second connection | `0x10` — activated |
-| Address `0x0DFF` outside the selected tester range | `0x00` — unknown source |
+| Connection and request | Expected response | What it verifies |
+|---|---|---|
+| First connection: tester `0x0E00`, activation type `0x00` | `0x10` — activated | Default activation succeeds. |
+| Same connection: tester `0x0E01`, activation type `0x00` | `0x02` — different source address | An activated connection cannot switch tester addresses. |
+| Same connection: tester `0x0E00`, activation type `0x01` | `0x06` — unsupported activation type | Only Default activation (`0x00`) is supported. |
+| Second connection: tester `0x0E00`, activation type `0x00` | `0x03` — source address active elsewhere | The first connection still owns `0x0E00`. |
+| Second connection: tester `0x0E01`, activation type `0x00` | `0x10` — activated | Separate connections may use distinct tester addresses. |
+| Second connection: tester `0x0DFF`, activation type `0x00` | `0x00` — unknown source address | Addresses outside the selected tester range are rejected. |
+
+The distinction between `0x02` and `0x03` is the connection: `0x02` rejects
+changing the address on an already activated socket; `0x03` rejects reusing
+another socket's active address.
 
 In the server terminal, each request should be logged as payload type
 `0x0005`, followed by a response log for payload type `0x0006`.
