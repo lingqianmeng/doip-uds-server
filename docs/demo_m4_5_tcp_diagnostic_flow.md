@@ -54,8 +54,9 @@ Then run the M4.5 TCP client:
 
 The TCP client sends a Default Routing Activation Request for tester
 `0x0E00`, checks the success response, sends UDS bytes `22 F1 90` to ECU
-`0x1001`, and checks the diagnostic ACK before closing. Stop `dumpcap` and the
-server with **Ctrl+C** after both clients finish.
+`0x1001`, and checks the diagnostic ACK before closing its TCP connection.
+Leave the capture running briefly after the client exits to record the TCP
+disconnection, then stop `dumpcap` and the server with **Ctrl+C**.
 
 ## What to observe in the capture
 
@@ -72,6 +73,7 @@ show both transports. The trace should include the following:
 | Routing Activation Response | TCP / `0x0006` | Tester `0x0E00`, ECU `0x1001`, code `0x10` |
 | Diagnostic Message | TCP / `0x8001` | Source `0x0E00`, target `0x1001`, UDS bytes `22 F1 90` |
 | Diagnostic Message ACK | TCP / `0x8002` | Source `0x1001`, target `0x0E00`, code `0x00` |
+| TCP disconnection | TCP | Graceful connection teardown after the diagnostic ACK (FIN/ACK packets) |
 
 The ACK confirms that the DoIP transport accepted the diagnostic bytes. No UDS
 service response is expected because service handling is a later milestone.
