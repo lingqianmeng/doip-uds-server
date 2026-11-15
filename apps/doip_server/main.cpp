@@ -13,6 +13,7 @@
 
 #include "doip_uds/ecu_identity.hpp"
 #include "doip_uds/doip_header.hpp"
+#include "doip_uds/diagnostic_message.hpp"
 #include "doip_uds/routing_activation.hpp"
 #include "doip_uds/tcp_transport.hpp"
 #include "doip_uds/udp_transport.hpp"
@@ -47,38 +48,67 @@ void process_tcp_message(TcpClientSession& client,
               << std::setw(4) << header->payload_type << std::dec << " bytes=" << message.size()
               << '\n';
 
-    if (header->payload_type != doip_uds::kDoipPayloadTypeRoutingActivationRequest) {
+    if (header->payload_type == doip_uds::kDoipPayloadTypeRoutingActivationRequest) {
+        if (header->protocol_version != doip_uds::kDoipProtocolVersion) {
+            throw std::runtime_error("routing activation requires DoIP protocol version 0x02");
+        }
+
+        const auto request = doip_uds::decode_routing_activation_request(
+            message.data() + doip_uds::kDoipGenericHeaderSize,
+            static_cast<std::size_t>(header->payload_length));
+        if (!request) {
+            throw std::runtime_error("routing activation request has an invalid payload length");
+        }
+
+        const bool active_on_another_socket =
+            std::any_of(clients.begin(), clients.end(), [&client, &request](const auto& other) {
+                return &other != &client && !other.closing &&
+                       other.routing_activation.active_tester_logical_address() ==
+                           request->tester_logical_address;
+            });
+        const auto response = client.routing_activation.handle_request(
+            *request, identity.logical_address, active_on_another_socket);
+        const auto response_payload = doip_uds::encode_routing_activation_response(response);
+        client.connection.send_message(doip_uds::kDoipPayloadTypeRoutingActivationResponse,
+                                       response_payload);
+
+        std::cout << "[TCP] Sent routing activation response to "
+                  << client.connection.peer_address() << ':' << client.connection.peer_port()
+                  << " tester=0x" << std::hex << std::uppercase << std::setw(4)
+                  << response.tester_logical_address << " entity=0x" << std::setw(4)
+                  << response.entity_logical_address << " code=0x" << std::setw(2)
+                  << static_cast<unsigned int>(response.response_code) << std::dec << '\n';
+        return;
+    }
+
+    if (header->payload_type != doip_uds::kDoipPayloadTypeDiagnosticMessage) {
         return;
     }
     if (header->protocol_version != doip_uds::kDoipProtocolVersion) {
-        throw std::runtime_error("routing activation requires DoIP protocol version 0x02");
+        throw std::runtime_error("diagnostic message requires DoIP protocol version 0x02");
     }
 
-    const auto request = doip_uds::decode_routing_activation_request(
+    const auto result = doip_uds::handle_diagnostic_message(
         message.data() + doip_uds::kDoipGenericHeaderSize,
-        static_cast<std::size_t>(header->payload_length));
-    if (!request) {
-        throw std::runtime_error("routing activation request has an invalid payload length");
+        static_cast<std::size_t>(header->payload_length),
+        client.routing_activation.active_tester_logical_address(),
+        identity.logical_address);
+    client.connection.send_message(result.response_payload_type, result.response_payload);
+
+    if (result.accepted_message) {
+        std::cout << "[TCP] Accepted diagnostic message from tester=0x" << std::hex
+                  << std::uppercase << std::setw(4)
+                  << result.accepted_message->source_logical_address << " target=0x"
+                  << std::setw(4) << result.accepted_message->target_logical_address << std::dec
+                  << " uds_bytes=" << result.accepted_message->user_data.size()
+                  << " ack_code=0x" << std::hex << std::uppercase << std::setw(2)
+                  << static_cast<unsigned int>(result.response_code) << std::dec << '\n';
+    } else {
+        std::cout << "[TCP] Sent diagnostic NACK to " << client.connection.peer_address() << ':'
+                  << client.connection.peer_port() << " code=0x" << std::hex << std::uppercase
+                  << std::setw(2) << static_cast<unsigned int>(result.response_code) << std::dec
+                  << '\n';
     }
-
-    const bool active_on_another_socket =
-        std::any_of(clients.begin(), clients.end(), [&client, &request](const auto& other) {
-            return &other != &client && !other.closing &&
-                   other.routing_activation.active_tester_logical_address() ==
-                       request->tester_logical_address;
-        });
-    const auto response = client.routing_activation.handle_request(
-        *request, identity.logical_address, active_on_another_socket);
-    const auto response_payload = doip_uds::encode_routing_activation_response(response);
-    client.connection.send_message(doip_uds::kDoipPayloadTypeRoutingActivationResponse,
-                                   response_payload);
-
-    std::cout << "[TCP] Sent routing activation response to "
-              << client.connection.peer_address() << ':' << client.connection.peer_port()
-              << " tester=0x" << std::hex << std::uppercase << std::setw(4)
-              << response.tester_logical_address << " entity=0x" << std::setw(4)
-              << response.entity_logical_address << " code=0x" << std::setw(2)
-              << static_cast<unsigned int>(response.response_code) << std::dec << '\n';
 }
 
 void accept_tcp_connections(doip_uds::TcpListener& listener,

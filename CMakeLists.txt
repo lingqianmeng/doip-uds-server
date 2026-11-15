@@ -46,6 +46,7 @@ endif()
 
 # Core library: DoIP + UDS logic (filled from milestone 2 on)
 add_library(doip_uds_core
+  src/diagnostic_message.cpp
   src/doip_header.cpp
   src/ecu_identity.cpp
   src/routing_activation.cpp

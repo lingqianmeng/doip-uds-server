@@ -105,6 +105,7 @@ three-way handshake and connection close. This M4.1 demo's TCP helper sends no
 application payload. M4.2 stream framing is described in the
 [m4_2_tcp_message_framing](m4_2_tcp_message_framing.md); routing activation is
 implemented in M4.3 as described in
-[m4_3_routing_activation](m4_3_routing_activation.md). Diagnostic-message
-handling is planned for M4.4. To focus only on the TCP activity, use
+[m4_3_routing_activation](m4_3_routing_activation.md), and diagnostic-message
+ACK/NACK handling is implemented in M4.4 as described in
+[m4_4_diagnostic_message_transport](m4_4_diagnostic_message_transport.md). To focus only on the TCP activity, use
 `tcp.port == 13400`.
