@@ -25,9 +25,10 @@ larger payload is rejected immediately with `std::length_error`; a header
 with an invalid inverse byte is rejected with `std::runtime_error`. The server
 logs the framing error and closes only the offending client connection.
 
-The server currently logs each complete frame's payload type and total size.
-It does not interpret payloads, perform routing activation, or send protocol
-responses; those are later M4 sub-milestones.
+The M4.2 demo sends generic payload frames that the server logs without
+interpreting. Routing Activation Request handling and responses are covered
+separately by the [M4.3 guide](m4_3_routing_activation.md) and
+[M4.3 demo](demo_m4_3_routing_activation.md).
 
 ## Demo
 

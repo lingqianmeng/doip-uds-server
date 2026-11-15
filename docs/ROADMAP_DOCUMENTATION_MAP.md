@@ -23,7 +23,8 @@ For milestones without a minor number, omit that segment (for example,
 | M3.4 — Vehicle-identification request handler | [m3_4_vehicle_identification_handler](m3_4_vehicle_identification_handler.md) | Guide added with implementation PR #11 and updated in PR #12. |
 | M3.5 — UDP discovery integration and usage | [m3_3_udp_transport](m3_3_udp_transport.md), [m3_4_vehicle_identification_handler](m3_4_vehicle_identification_handler.md), [demo_m3_5_udp_discovery](demo_m3_5_udp_discovery.md), and [README run instructions](../README.md#build-and-test) | PR #12 updated the original guides and README; the dedicated walkthrough records the Scoop Wireshark loopback capture and VIR/VAM steps. |
 | M4.1 — TCP transport | [m4_1_tcp_transport](m4_1_tcp_transport.md) and [demo_m4_1_tcp_connections](demo_m4_1_tcp_connections.md) | Adds the TCP listener, concurrent connection lifecycle, transport tests, and a capture/demo variant that preserves the original UDP guide. |
-| M4.2 — TCP message framing | [m4_2_tcp_message_framing](m4_2_tcp_message_framing.md) and [demo_m4_2_tcp_message_framing](demo_m4_2_tcp_message_framing.md) | Adds bounded DoIP stream framing with tests, plus a separate PowerShell walkthrough for fragmented, coalesced, and oversized messages. |
+| M4.2 — TCP message framing | [m4_2_tcp_message_framing](m4_2_tcp_message_framing.md) and [demo_m4_2_tcp_message_framing](demo_m4_2_tcp_message_framing.md) | Adds bounded DoIP stream framing with tests, plus its own PowerShell walkthrough for fragmented, coalesced, and oversized messages. |
+| M4.3 — Routing activation | [m4_3_routing_activation](m4_3_routing_activation.md) and [demo_m4_3_routing_activation](demo_m4_3_routing_activation.md) | Adds version-0x02 routing-activation codecs, per-connection state, response policy, TCP connection-level tests, and a dedicated activation demo. |
 
 The M3 breakdown itself was recorded in the README in PR #5. The detailed
 guides explain the implementation and tests for individual features; the
@@ -31,7 +32,7 @@ README remains the top-level overview and setup guide.
 
 ## Upcoming roadmap steps
 
-M4 is in progress: M4.1 and M4.2 are complete and have guides, while M4.3–M4.5
+M4 is in progress: M4.1–M4.3 are complete and have guides, while M4.4–M4.5
 remain unchecked. M5–M10 are upcoming. When a step is implemented, add or
 update its guide and update this table in the same PR. A dedicated guide is
 useful when a feature needs more explanation than belongs in the README; it

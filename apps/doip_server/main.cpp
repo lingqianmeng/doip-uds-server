@@ -13,6 +13,7 @@
 
 #include "doip_uds/ecu_identity.hpp"
 #include "doip_uds/doip_header.hpp"
+#include "doip_uds/routing_activation.hpp"
 #include "doip_uds/tcp_transport.hpp"
 #include "doip_uds/udp_transport.hpp"
 #include "doip_uds/version.hpp"
@@ -26,9 +27,64 @@ void handle_interrupt(int) {
     stop_requested = 1;
 }
 
+struct TcpClientSession {
+    doip_uds::TcpConnection connection;
+    doip_uds::RoutingActivationSession routing_activation;
+    bool closing{false};
+};
+
+void process_tcp_message(TcpClientSession& client,
+                         const std::vector<TcpClientSession>& clients,
+                         const doip_uds::EcuIdentity& identity,
+                         const std::vector<std::uint8_t>& message) {
+    const auto header = doip_uds::decode_doip_header(message.data(), message.size());
+    if (!header) {
+        throw std::runtime_error("framed message has an invalid generic header");
+    }
+
+    std::cout << "[TCP] Received DoIP frame from " << client.connection.peer_address() << ':'
+              << client.connection.peer_port() << " type=0x" << std::hex << std::uppercase
+              << std::setw(4) << header->payload_type << std::dec << " bytes=" << message.size()
+              << '\n';
+
+    if (header->payload_type != doip_uds::kDoipPayloadTypeRoutingActivationRequest) {
+        return;
+    }
+    if (header->protocol_version != doip_uds::kDoipProtocolVersion) {
+        throw std::runtime_error("routing activation requires DoIP protocol version 0x02");
+    }
+
+    const auto request = doip_uds::decode_routing_activation_request(
+        message.data() + doip_uds::kDoipGenericHeaderSize,
+        static_cast<std::size_t>(header->payload_length));
+    if (!request) {
+        throw std::runtime_error("routing activation request has an invalid payload length");
+    }
+
+    const bool active_on_another_socket =
+        std::any_of(clients.begin(), clients.end(), [&client, &request](const auto& other) {
+            return &other != &client && !other.closing &&
+                   other.routing_activation.active_tester_logical_address() ==
+                       request->tester_logical_address;
+        });
+    const auto response = client.routing_activation.handle_request(
+        *request, identity.logical_address, active_on_another_socket);
+    const auto response_payload = doip_uds::encode_routing_activation_response(response);
+    client.connection.send_message(doip_uds::kDoipPayloadTypeRoutingActivationResponse,
+                                   response_payload);
+
+    std::cout << "[TCP] Sent routing activation response to "
+              << client.connection.peer_address() << ':' << client.connection.peer_port()
+              << " tester=0x" << std::hex << std::uppercase << std::setw(4)
+              << response.tester_logical_address << " entity=0x" << std::setw(4)
+              << response.entity_logical_address << " code=0x" << std::setw(2)
+              << static_cast<unsigned int>(response.response_code) << std::dec << '\n';
+}
+
 void accept_tcp_connections(doip_uds::TcpListener& listener,
+                            const doip_uds::EcuIdentity& identity,
                             const std::atomic<bool>& tcp_failed) {
-    std::vector<doip_uds::TcpConnection> connections;
+    std::vector<TcpClientSession> connections;
     constexpr auto kAcceptTimeout = std::chrono::milliseconds(100);
 
     while (stop_requested == 0 && !tcp_failed.load()) {
@@ -36,54 +92,51 @@ void accept_tcp_connections(doip_uds::TcpListener& listener,
         if (connection) {
             std::cout << "[TCP] Accepted client " << connection->peer_address() << ':'
                       << connection->peer_port() << '\n';
-            connections.push_back(std::move(*connection));
+            connections.push_back({std::move(*connection), {}, false});
         }
 
-        connections.erase(
-            std::remove_if(connections.begin(),
-                           connections.end(),
-                           [](doip_uds::TcpConnection& active_connection) {
-                               try {
-                                   constexpr std::size_t kMaxFramesPerClientPerIteration = 32;
-                                   for (std::size_t frame_index = 0;
-                                        frame_index < kMaxFramesPerClientPerIteration;
-                                        ++frame_index) {
-                                       const auto message =
-                                           active_connection.receive_message_for(
-                                               std::chrono::milliseconds::zero());
-                                       if (!message) {
-                                           break;
-                                       }
-                                       const auto header =
-                                           doip_uds::decode_doip_header(message->data(),
-                                                                        message->size());
-                                       if (!header) {
-                                           throw std::runtime_error(
-                                               "framed message has an invalid generic header");
-                                       }
-                                       std::cout << "[TCP] Received DoIP frame from "
-                                                 << active_connection.peer_address() << ':'
-                                                 << active_connection.peer_port() << " type=0x"
-                                                 << std::hex << std::uppercase << std::setw(4)
-                                                 << header->payload_type << std::dec
-                                                 << " bytes=" << message->size() << '\n';
-                                   }
-                                   if (active_connection.is_connected()) {
-                                       return false;
-                                   }
-                               } catch (const std::exception& error) {
-                                   std::cerr << "[TCP] Closing client "
-                                             << active_connection.peer_address() << ':'
-                                             << active_connection.peer_port() << ": "
-                                             << error.what() << '\n';
-                                   return true;
-                               }
-                               std::cout << "[TCP] Client " << active_connection.peer_address()
-                                         << ':' << active_connection.peer_port()
-                                         << " disconnected\n";
-                               return true;
-                           }),
-            connections.end());
+        for (auto& client : connections) {
+            if (client.closing) {
+                continue;
+            }
+            try {
+                if (!client.connection.is_connected()) {
+                    std::cout << "[TCP] Client " << client.connection.peer_address() << ':'
+                              << client.connection.peer_port() << " disconnected\n";
+                    client.closing = true;
+                    continue;
+                }
+
+                constexpr std::size_t kMaxFramesPerClientPerIteration = 32;
+                for (std::size_t frame_index = 0;
+                     frame_index < kMaxFramesPerClientPerIteration;
+                     ++frame_index) {
+                    const auto message =
+                        client.connection.receive_message_for(std::chrono::milliseconds::zero());
+                    if (!message) {
+                        break;
+                    }
+                    process_tcp_message(client, connections, identity, *message);
+                }
+
+                if (!client.connection.is_connected()) {
+                    std::cout << "[TCP] Client " << client.connection.peer_address() << ':'
+                              << client.connection.peer_port() << " disconnected\n";
+                    client.closing = true;
+                }
+            } catch (const std::exception& error) {
+                std::cerr << "[TCP] Closing client " << client.connection.peer_address() << ':'
+                          << client.connection.peer_port() << ": " << error.what() << '\n';
+                client.closing = true;
+            }
+        }
+
+        connections.erase(std::remove_if(connections.begin(),
+                                         connections.end(),
+                                         [](const TcpClientSession& client) {
+                                             return client.closing;
+                                         }),
+                          connections.end());
     }
 }
 
@@ -121,7 +174,7 @@ int main(int argc, char* argv[]) {
         std::atomic<bool> tcp_failed{false};
         std::thread tcp_acceptor([&] {
             try {
-                accept_tcp_connections(tcp_listener, tcp_failed);
+                accept_tcp_connections(tcp_listener, identity, tcp_failed);
             } catch (...) {
                 tcp_error = std::current_exception();
                 tcp_failed.store(true);

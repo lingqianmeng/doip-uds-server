@@ -8,6 +8,7 @@ find_package(Threads REQUIRED)
 add_executable(unit_tests
   unit/test_doip_header.cpp
   unit/test_ecu_identity.cpp
+  unit/test_routing_activation.cpp
   unit/test_tcp_transport.cpp
   unit/test_udp_transport.cpp
   unit/test_vehicle_identification.cpp
@@ -18,6 +19,7 @@ target_link_libraries(unit_tests PRIVATE doip_uds_core project_warnings GTest::g
 gtest_discover_tests(unit_tests)
 
 add_executable(integration_tests
+  integration/test_routing_activation_tcp.cpp
   integration/test_vehicle_identification_udp.cpp
 )
 target_link_libraries(integration_tests PRIVATE doip_uds_core project_warnings GTest::gtest GTest::gtest_main Threads::Threads)

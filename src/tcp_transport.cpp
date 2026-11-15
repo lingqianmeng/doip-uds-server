@@ -416,6 +416,61 @@ std::optional<std::vector<std::uint8_t>> TcpConnection::receive_message_for(
     }
 }
 
+void TcpConnection::send_message(std::uint16_t payload_type,
+                                 const std::vector<std::uint8_t>& payload) {
+    if (payload.size() > kMaxDoipTcpPayloadSize) {
+        throw std::length_error("DoIP TCP payload exceeds the configured maximum");
+    }
+    if (!impl_ || impl_->socket == kInvalidSocket) {
+        throw std::logic_error("cannot send on an invalid TCP connection");
+    }
+
+    const auto header = encode_doip_header(
+        {kDoipProtocolVersion, payload_type, static_cast<std::uint32_t>(payload.size())});
+    std::vector<std::uint8_t> message;
+    message.reserve(header.size() + payload.size());
+    message.insert(message.end(), header.begin(), header.end());
+    message.insert(message.end(), payload.begin(), payload.end());
+
+    std::size_t offset = 0;
+    while (offset < message.size()) {
+#ifdef _WIN32
+        const int sent = send(impl_->socket,
+                              reinterpret_cast<const char*>(message.data() + offset),
+                              static_cast<int>(message.size() - offset),
+                              0);
+#else
+        int flags = 0;
+#ifdef MSG_NOSIGNAL
+        flags = MSG_NOSIGNAL;
+#endif
+        const auto sent = send(impl_->socket,
+                               message.data() + offset,
+                               message.size() - offset,
+                               flags);
+#endif
+        if (sent > 0) {
+            offset += static_cast<std::size_t>(sent);
+            continue;
+        }
+        if (sent == 0) {
+            throw std::runtime_error("TCP connection closed while sending a DoIP message");
+        }
+
+        const int error = last_socket_error();
+#ifdef _WIN32
+        if (error == WSAEINTR) {
+            continue;
+        }
+#else
+        if (error == EINTR) {
+            continue;
+        }
+#endif
+        throw_socket_error("send", error);
+    }
+}
+
 const std::string& TcpConnection::peer_address() const noexcept {
     static const std::string empty;
     return impl_ ? impl_->remote_address : empty;
