@@ -139,8 +139,8 @@ Implement protocol logic in the core library, keeping the executable entry point
   - [x] **M4.4 — Diagnostic-message transport:** accept Diagnostic Messages (`0x8001`) only after activation, require the source to match the active tester and the target to match the configured ECU, and send ACK (`0x8002`) or NACK (`0x8003`) responses. Accepted UDS bytes remain uninterpreted and available to a future UDS layer. See the [m4_4_diagnostic_message_transport](docs/m4_4_diagnostic_message_transport.md) and [demo_m4_4_diagnostic_message_transport](docs/demo_m4_4_diagnostic_message_transport.md).
   - [x] **M4.5 — Integration and usage:** verify TCP connect → routing activation → diagnostic-message flow on one connection and document the live exchange. The integration test checks the routing response, diagnostic ACK, and preserved UDS bytes. See the [m4_5_tcp_diagnostic_flow](docs/m4_5_tcp_diagnostic_flow.md) and [demo_m4_5_tcp_diagnostic_flow](docs/demo_m4_5_tcp_diagnostic_flow.md).
 - [ ] M5 UDS dispatcher, 0x10 / 0x3E / 0x11
-  - [ ] **Phase 1 — Define the boundary:** agree on the dispatcher interface, per-connection UDS state, the DoIP ACK versus UDS response flow, supported subfunctions, timing values, and negative-response behavior. Review and approve this boundary before implementation.
-  - [ ] **Phase 2 — Build the services:** after boundary approval, implement SessionControl (`0x10`), TesterPresent (`0x3E`), and ECUReset (`0x11`); integrate the dispatcher with TCP diagnostics; add unit and integration tests; and provide one M5 guide and one dedicated M5 demo.
+  - [ ] **M5.1 — Define the UDS boundary:** agree on the dispatcher interface, per-connection UDS state, the DoIP ACK versus UDS response flow, supported subfunctions, timing values, and negative-response behavior. Review and approve this boundary before implementation.
+  - [ ] **M5.2 — Build the UDS services:** after M5.1 approval, implement SessionControl (`0x10`), TesterPresent (`0x3E`), and ECUReset (`0x11`); integrate the dispatcher with TCP diagnostics; add unit and integration tests; and provide one M5 guide and one dedicated M5 demo.
 - [ ] M6 0x22 / 0x2E
 - [ ] M7 0x19 / 0x14
 - [ ] M8 0x27 SecurityAccess
@@ -151,6 +151,6 @@ M3 completed the UDP vehicle-identification flow, from independently tested
 payload and configuration components to end-to-end discovery. M4.1–M4.5 are
 complete, adding TCP transport, message framing, routing activation,
 diagnostic-message acknowledgement, and the integrated TCP diagnostic flow.
-M5 will first define and review the UDS boundary, then implement the three
+M5.1 will define and review the UDS boundary; M5.2 will implement the three
 initial services under one milestone and one dedicated demo. Full UDS service
 handling remains an upcoming milestone.

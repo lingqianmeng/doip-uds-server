@@ -35,8 +35,9 @@ README remains the top-level overview and setup guide.
 ## Upcoming roadmap steps
 
 M4.1–M4.5 are complete and have guides. M5–M10 are upcoming. M5 is planned as
-one milestone with two phases: define and review the UDS boundary first, then
-implement the three initial services with one M5 guide and one dedicated demo.
+one milestone with two sub-milestones: M5.1 defines and reviews the UDS
+boundary; M5.2 implements the three initial services with one M5 guide and one
+dedicated demo.
 When a step is implemented, add or update its guide and update this table in
 the same PR. A dedicated guide is useful when a feature needs more explanation
 than belongs in the README; it does not need to be created for every small PR.
