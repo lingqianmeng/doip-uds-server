@@ -9,6 +9,7 @@
 #include "doip_uds/doip_header.hpp"
 #include "doip_uds/routing_activation.hpp"
 #include "doip_uds/tcp_transport.hpp"
+#include "doip_uds/uds_dispatcher.hpp"
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -167,11 +168,11 @@ DoipFrame receive_frame(ClientSocket& client) {
 
 }  // namespace
 
-TEST(DiagnosticFlowTcp, ActivatesAndAcknowledgesDiagnosticMessageOnSameConnection) {
+TEST(DiagnosticFlowTcp, ActivatesAcknowledgesAndReturnsUdsResponseOnSameConnection) {
     constexpr std::uint16_t kTesterAddress = 0x0E00;
     constexpr std::uint16_t kEntityAddress = 0x1001;
     const doip_uds::DiagnosticMessage diagnostic_request{
-        kTesterAddress, kEntityAddress, {0x22, 0xF1, 0x90}};
+        kTesterAddress, kEntityAddress, {0x3E, 0x00}};
 
     doip_uds::TcpListener listener("127.0.0.1", 0);
     ClientSocket client;
@@ -242,4 +243,23 @@ TEST(DiagnosticFlowTcp, ActivatesAndAcknowledgesDiagnosticMessageOnSameConnectio
               doip_uds::kDoipPayloadTypeDiagnosticMessagePositiveAck);
     EXPECT_EQ(received_acknowledgement.payload,
               (std::vector<std::uint8_t>{0x10, 0x01, 0x0E, 0x00, 0x00}));
+
+    doip_uds::UdsConnectionState uds_state;
+    const auto uds_result = doip_uds::dispatch_uds_request(
+        diagnostic_result.accepted_message->user_data, uds_state);
+    ASSERT_TRUE(uds_result.response.has_value());
+    server_connection->send_message(
+        doip_uds::kDoipPayloadTypeDiagnosticMessage,
+        doip_uds::encode_diagnostic_message(
+            {kEntityAddress, kTesterAddress, *uds_result.response}));
+
+    const auto received_uds_response = receive_frame(client);
+    ASSERT_EQ(received_uds_response.payload_type,
+              doip_uds::kDoipPayloadTypeDiagnosticMessage);
+    const auto decoded_uds_response = doip_uds::decode_diagnostic_message(
+        received_uds_response.payload.data(), received_uds_response.payload.size());
+    ASSERT_TRUE(decoded_uds_response.has_value());
+    EXPECT_EQ(decoded_uds_response->source_logical_address, kEntityAddress);
+    EXPECT_EQ(decoded_uds_response->target_logical_address, kTesterAddress);
+    EXPECT_EQ(decoded_uds_response->user_data, (std::vector<std::uint8_t>{0x7E, 0x00}));
 }

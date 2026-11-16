@@ -9,7 +9,8 @@ single-ECU routing policy; it does not claim complete DoIP conformance.
 
 A Diagnostic Message payload contains a two-byte source logical address, a
 two-byte target logical address, and at least one byte of user data. The user
-data is preserved as-is; this milestone does not interpret UDS services.
+data is preserved as-is by the M4.4 transport handler; this milestone did not
+interpret UDS services.
 
 The server applies these checks in order:
 
@@ -27,6 +28,10 @@ ACK and NACK payloads contain the ECU source address, tester target address,
 and response code. The optional previous-message data field is omitted.
 Diagnostic payloads shorter than five bytes are malformed; only that TCP
 connection is closed.
+
+M5 builds on this handoff: the server sends the DoIP ACK first, then passes
+accepted user data to the UDS dispatcher and sends any UDS response as a
+separate reverse-addressed Diagnostic Message.
 
 ## Tests and demo
 

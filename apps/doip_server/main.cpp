@@ -17,6 +17,7 @@
 #include "doip_uds/routing_activation.hpp"
 #include "doip_uds/tcp_transport.hpp"
 #include "doip_uds/udp_transport.hpp"
+#include "doip_uds/uds_dispatcher.hpp"
 #include "doip_uds/version.hpp"
 #include "doip_uds/vehicle_identification_server.hpp"
 
@@ -31,6 +32,7 @@ void handle_interrupt(int) {
 struct TcpClientSession {
     doip_uds::TcpConnection connection;
     doip_uds::RoutingActivationSession routing_activation;
+    doip_uds::UdsConnectionState uds_state;
     bool closing{false};
 };
 
@@ -103,6 +105,27 @@ void process_tcp_message(TcpClientSession& client,
                   << " uds_bytes=" << result.accepted_message->user_data.size()
                   << " ack_code=0x" << std::hex << std::uppercase << std::setw(2)
                   << static_cast<unsigned int>(result.response_code) << std::dec << '\n';
+
+        const auto uds_result = doip_uds::dispatch_uds_request(
+            result.accepted_message->user_data, client.uds_state);
+        if (uds_result.reset_requested == doip_uds::UdsEcuResetType::hard_reset) {
+            std::cout << "[UDS] Simulated ECU hard reset; session returned to default\n";
+        }
+        if (uds_result.response) {
+            const doip_uds::DiagnosticMessage uds_response{
+                identity.logical_address,
+                result.accepted_message->source_logical_address,
+                *uds_result.response};
+            client.connection.send_message(
+                doip_uds::kDoipPayloadTypeDiagnosticMessage,
+                doip_uds::encode_diagnostic_message(uds_response));
+            std::cout << "[UDS] Sent response SID=0x" << std::hex << std::uppercase
+                      << std::setw(2) << static_cast<unsigned int>(uds_result.response->front())
+                      << " to tester=0x" << std::setw(4)
+                      << result.accepted_message->source_logical_address << std::dec << '\n';
+        } else {
+            std::cout << "[UDS] Positive response suppressed\n";
+        }
     } else {
         std::cout << "[TCP] Sent diagnostic NACK to " << client.connection.peer_address() << ':'
                   << client.connection.peer_port() << " code=0x" << std::hex << std::uppercase
@@ -122,7 +145,7 @@ void accept_tcp_connections(doip_uds::TcpListener& listener,
         if (connection) {
             std::cout << "[TCP] Accepted client " << connection->peer_address() << ':'
                       << connection->peer_port() << '\n';
-            connections.push_back({std::move(*connection), {}, false});
+            connections.push_back({std::move(*connection), {}, {}, false});
         }
 
         for (auto& client : connections) {

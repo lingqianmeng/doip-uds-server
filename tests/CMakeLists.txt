@@ -12,6 +12,7 @@ add_executable(unit_tests
   unit/test_routing_activation.cpp
   unit/test_tcp_transport.cpp
   unit/test_udp_transport.cpp
+  unit/test_uds_dispatcher.cpp
   unit/test_vehicle_identification.cpp
   unit/test_vehicle_identification_handler.cpp
   unit/test_version.cpp

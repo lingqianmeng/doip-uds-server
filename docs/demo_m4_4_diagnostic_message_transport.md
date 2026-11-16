@@ -52,11 +52,13 @@ server with **Ctrl+C** after the script finishes.
 | Diagnostic message before activation | `0x8003`, code `0x02` | No routing-activated tester is registered on the connection. |
 | Source `0x0E01` after activating `0x0E00` | `0x8003`, code `0x02` | The message source does not match the connection's tester address. |
 | Target `0x1002` instead of this ECU's `0x1001` | `0x8003`, code `0x03` | The target is not the configured ECU. |
-| Source `0x0E00`, target `0x1001`, UDS bytes `22 F1 90` | `0x8002`, code `0x00` | The transport accepts the message and preserves its UDS bytes without interpreting them. |
+| Source `0x0E00`, target `0x1001`, UDS bytes `22 F1 90` | `0x8002`, code `0x00`, then `0x8001` carrying UDS `7F 22 11` | The DoIP transport accepts the message; M5's dispatcher reports that service `0x22` is not yet supported. |
 
 ACK/NACK response addresses are in response direction: source `0x1001` (the
 ECU) and target equal to the tester address from the request. The server logs
-the accepted UDS payload length; no UDS service response is expected.
+the accepted UDS payload length. The M5 UDS dispatcher then sends a separate
+Diagnostic Message containing the negative response for the unimplemented
+`0x22` service.
 
 Open the separate M4.4 capture:
 
@@ -65,6 +67,7 @@ wireshark .\captures\doip_m4_4.pcapng
 ```
 
 Use the display filter `tcp.port == 13400`. The diagnostic requests use payload
-type `0x8001`; responses use `0x8002` for ACK or `0x8003` for NACK. The
-response code follows the two logical addresses in the response payload. Use
-**Follow → TCP Stream** to inspect the reassembled connection bytes.
+type `0x8001`; responses use `0x8002` for ACK, `0x8003` for NACK, and `0x8001`
+for the UDS response message. ACK/NACK response codes follow the two logical
+addresses in the response payload. Use **Follow → TCP Stream** to inspect the
+reassembled connection bytes.

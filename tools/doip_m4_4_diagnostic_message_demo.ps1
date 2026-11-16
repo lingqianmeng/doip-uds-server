@@ -120,6 +120,24 @@ function Assert-DiagnosticResponse {
         $Description, $response.PayloadType, $sourceAddress, $targetAddress, $code)
 }
 
+function Assert-UdsNegativeResponse {
+    param([System.Net.Sockets.NetworkStream]$Stream)
+
+    $response = Read-DoipFrame -Stream $Stream
+    if ($response.PayloadType -ne 0x8001 -or $response.Payload.Length -ne 7) {
+        throw "Expected a Diagnostic Message containing a three-byte UDS negative response."
+    }
+
+    $sourceAddress = ([int]$response.Payload[0] -shl 8) -bor [int]$response.Payload[1]
+    $targetAddress = ([int]$response.Payload[2] -shl 8) -bor [int]$response.Payload[3]
+    if ($sourceAddress -ne 0x1001 -or $targetAddress -ne 0x0e00 -or
+        $response.Payload[4] -ne 0x7f -or $response.Payload[5] -ne 0x22 -or
+        $response.Payload[6] -ne 0x11) {
+        throw "Expected UDS negative response 7F 22 11 from the configured ECU."
+    }
+    Write-Output "M5 UDS response: 7F 22 11 (service 0x22 is not yet implemented)."
+}
+
 $client = [System.Net.Sockets.TcpClient]::new()
 try {
     try {
@@ -191,7 +209,7 @@ try {
         -ExpectedCode 0x00 `
         -ExpectedEntityAddress 0x1001 `
         -ExpectedTesterAddress 0x0e00
-    Write-Output "The accepted UDS bytes were acknowledged but not interpreted."
+    Assert-UdsNegativeResponse -Stream $stream
 } finally {
     $client.Dispose()
 }
