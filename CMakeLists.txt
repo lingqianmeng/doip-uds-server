@@ -52,6 +52,7 @@ add_library(doip_uds_core
   src/routing_activation.cpp
   src/tcp_transport.cpp
   src/udp_transport.cpp
+  src/uds_dispatcher.cpp
   src/vehicle_identification.cpp
   src/vehicle_identification_handler.cpp
   src/vehicle_identification_server.cpp
