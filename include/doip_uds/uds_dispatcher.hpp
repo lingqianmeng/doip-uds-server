@@ -1,21 +1,29 @@
 #pragma once
 
 #include <cstdint>
+#include <map>
 #include <optional>
 #include <vector>
+
+#include "doip_uds/ecu_identity.hpp"
 
 namespace doip_uds {
 
 inline constexpr std::uint8_t kUdsServiceSessionControl = 0x10;
 inline constexpr std::uint8_t kUdsServiceEcuReset = 0x11;
+inline constexpr std::uint8_t kUdsServiceReadDataByIdentifier = 0x22;
+inline constexpr std::uint8_t kUdsServiceWriteDataByIdentifier = 0x2E;
 inline constexpr std::uint8_t kUdsServiceTesterPresent = 0x3E;
 
 inline constexpr std::uint8_t kUdsNegativeResponseCodeServiceNotSupported = 0x11;
 inline constexpr std::uint8_t kUdsNegativeResponseCodeSubfunctionNotSupported = 0x12;
 inline constexpr std::uint8_t kUdsNegativeResponseCodeIncorrectLength = 0x13;
+inline constexpr std::uint8_t kUdsNegativeResponseCodeRequestOutOfRange = 0x31;
+inline constexpr std::uint8_t kUdsNegativeResponseCodeServiceNotSupportedInActiveSession = 0x7E;
 
 inline constexpr std::uint16_t kUdsP2ServerMaximumMilliseconds = 50;
 inline constexpr std::uint16_t kUdsP2StarServerMaximum10Milliseconds = 500;
+inline constexpr std::uint16_t kUdsVinDataIdentifier = kVinDataIdentifier;
 
 enum class UdsDiagnosticSession : std::uint8_t {
     default_session = 0x01,
@@ -30,13 +38,25 @@ struct UdsConnectionState {
     UdsDiagnosticSession session{UdsDiagnosticSession::default_session};
 };
 
+struct UdsDataIdentifier {
+    std::vector<std::uint8_t> value;
+    bool readable{};
+    bool writable{};
+};
+
+using UdsDataIdentifierStore = std::map<std::uint16_t, UdsDataIdentifier>;
+
 struct UdsDispatchResult {
     std::optional<std::vector<std::uint8_t>> response;
     std::optional<UdsEcuResetType> reset_requested;
 };
 
+/// Creates the process-wide DID store, including the configured VIN DID.
+UdsDataIdentifierStore make_uds_data_identifier_store(const EcuIdentity& identity);
+
 /// Dispatches one non-empty UDS request and updates the connection's UDS state.
 UdsDispatchResult dispatch_uds_request(const std::vector<std::uint8_t>& request,
-                                      UdsConnectionState& state);
+                                      UdsConnectionState& state,
+                                      UdsDataIdentifierStore& data_identifiers);
 
 }  // namespace doip_uds

@@ -137,19 +137,26 @@ try {
         [BitConverter]::ToString($udsData).Replace('-', ' '))
 
     $udsResponse = Read-DoipFrame -Stream $stream
-    if ($udsResponse.PayloadType -ne 0x8001 -or $udsResponse.Payload.Length -ne 7) {
+    if ($udsResponse.PayloadType -ne 0x8001 -or $udsResponse.Payload.Length -ne 24) {
         throw "Received an invalid UDS Diagnostic Message response."
     }
     $udsResponseSource =
         ([int]$udsResponse.Payload[0] -shl 8) -bor [int]$udsResponse.Payload[1]
     $udsResponseTarget =
         ([int]$udsResponse.Payload[2] -shl 8) -bor [int]$udsResponse.Payload[3]
+    $expectedUdsResponse =
+        [byte[]](0x62, 0xf1, 0x90) +
+        [System.Text.Encoding]::ASCII.GetBytes("WVWZZZ00000000001")
+    $actualUdsResponse =
+        [byte[]]$udsResponse.Payload[4..($udsResponse.Payload.Length - 1)]
     if ($udsResponseSource -ne $entityAddress -or
         $udsResponseTarget -ne $testerAddress -or
-        [BitConverter]::ToString([byte[]]$udsResponse.Payload[4..6]) -ne '7F-22-11') {
-        throw "Received an unexpected UDS negative response."
+        [BitConverter]::ToString($actualUdsResponse) -ne
+        [BitConverter]::ToString($expectedUdsResponse)) {
+        throw "Received an unexpected VIN read response."
     }
-    Write-Output "UDS response: 7F 22 11 (service 0x22 is not yet implemented)."
+    Write-Output ("UDS response: {0}" -f
+        [BitConverter]::ToString($actualUdsResponse).Replace('-', ' '))
 } finally {
     $client.Dispose()
 }

@@ -166,6 +166,72 @@ DoipFrame receive_frame(ClientSocket& client) {
                                  std::chrono::seconds(1))};
 }
 
+std::vector<std::uint8_t> exchange_uds_request(
+    ClientSocket& client,
+    doip_uds::TcpConnection& server_connection,
+    doip_uds::RoutingActivationSession& activation_session,
+    doip_uds::UdsConnectionState& uds_state,
+    doip_uds::UdsDataIdentifierStore& data_identifiers,
+    const std::vector<std::uint8_t>& uds_request) {
+    constexpr std::uint16_t kTesterAddress = 0x0E00;
+    constexpr std::uint16_t kEntityAddress = 0x1001;
+    const doip_uds::DiagnosticMessage diagnostic_request{
+        kTesterAddress, kEntityAddress, uds_request};
+    client.send_bytes(make_message(doip_uds::kDoipPayloadTypeDiagnosticMessage,
+                                   doip_uds::encode_diagnostic_message(diagnostic_request)));
+
+    const auto received_diagnostic =
+        server_connection.receive_message_for(std::chrono::seconds(1));
+    if (!received_diagnostic) {
+        throw std::runtime_error("Server did not receive the diagnostic request");
+    }
+    const auto header = doip_uds::decode_doip_header(
+        received_diagnostic->data(), received_diagnostic->size());
+    if (!header || header->payload_type != doip_uds::kDoipPayloadTypeDiagnosticMessage) {
+        throw std::runtime_error("Server received an invalid diagnostic frame");
+    }
+    const auto diagnostic_result = doip_uds::handle_diagnostic_message(
+        received_diagnostic->data() + doip_uds::kDoipGenericHeaderSize,
+        static_cast<std::size_t>(header->payload_length),
+        activation_session.active_tester_logical_address(),
+        kEntityAddress);
+    if (!diagnostic_result.accepted_message) {
+        throw std::runtime_error("Server rejected a valid diagnostic request");
+    }
+    server_connection.send_message(diagnostic_result.response_payload_type,
+                                   diagnostic_result.response_payload);
+
+    const auto acknowledgement = receive_frame(client);
+    if (acknowledgement.payload_type !=
+            doip_uds::kDoipPayloadTypeDiagnosticMessagePositiveAck ||
+        acknowledgement.payload !=
+            std::vector<std::uint8_t>{0x10, 0x01, 0x0E, 0x00, 0x00}) {
+        throw std::runtime_error("Client received an invalid Diagnostic Message ACK");
+    }
+
+    const auto uds_result = doip_uds::dispatch_uds_request(
+        diagnostic_result.accepted_message->user_data, uds_state, data_identifiers);
+    if (!uds_result.response) {
+        throw std::runtime_error("Expected a UDS response for the integration request");
+    }
+    server_connection.send_message(
+        doip_uds::kDoipPayloadTypeDiagnosticMessage,
+        doip_uds::encode_diagnostic_message(
+            {kEntityAddress, kTesterAddress, *uds_result.response}));
+
+    const auto response = receive_frame(client);
+    if (response.payload_type != doip_uds::kDoipPayloadTypeDiagnosticMessage) {
+        throw std::runtime_error("Client received an invalid UDS Diagnostic Message");
+    }
+    const auto decoded = doip_uds::decode_diagnostic_message(
+        response.payload.data(), response.payload.size());
+    if (!decoded || decoded->source_logical_address != kEntityAddress ||
+        decoded->target_logical_address != kTesterAddress) {
+        throw std::runtime_error("UDS response had invalid logical addresses");
+    }
+    return decoded->user_data;
+}
+
 }  // namespace
 
 TEST(DiagnosticFlowTcp, ActivatesAcknowledgesAndReturnsUdsResponseOnSameConnection) {
@@ -245,8 +311,16 @@ TEST(DiagnosticFlowTcp, ActivatesAcknowledgesAndReturnsUdsResponseOnSameConnecti
               (std::vector<std::uint8_t>{0x10, 0x01, 0x0E, 0x00, 0x00}));
 
     doip_uds::UdsConnectionState uds_state;
+    doip_uds::UdsDataIdentifierStore data_identifiers{
+        {0xF190,
+         {{'W', 'V', 'W', 'Z', 'Z', 'Z', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0',
+           '1'},
+          true,
+          false}},
+        {0xF1A0, {{0x00, 0x00, 0x00, 0x00}, true, true}},
+    };
     const auto uds_result = doip_uds::dispatch_uds_request(
-        diagnostic_result.accepted_message->user_data, uds_state);
+        diagnostic_result.accepted_message->user_data, uds_state, data_identifiers);
     ASSERT_TRUE(uds_result.response.has_value());
     server_connection->send_message(
         doip_uds::kDoipPayloadTypeDiagnosticMessage,
@@ -262,4 +336,42 @@ TEST(DiagnosticFlowTcp, ActivatesAcknowledgesAndReturnsUdsResponseOnSameConnecti
     EXPECT_EQ(decoded_uds_response->source_logical_address, kEntityAddress);
     EXPECT_EQ(decoded_uds_response->target_logical_address, kTesterAddress);
     EXPECT_EQ(decoded_uds_response->user_data, (std::vector<std::uint8_t>{0x7E, 0x00}));
+
+    EXPECT_EQ(exchange_uds_request(client,
+                                   *server_connection,
+                                   activation_session,
+                                   uds_state,
+                                   data_identifiers,
+                                   {0x22, 0xF1, 0x90, 0xF1, 0xA0}),
+              (std::vector<std::uint8_t>{0x62, 0xF1, 0x90, 'W', 'V', 'W', 'Z', 'Z', 'Z',
+                                         '0',  '0',  '0',  '0', '0', '0', '0', '0', '0', '0',
+                                         '1',  0xF1, 0xA0, 0x00, 0x00, 0x00, 0x00}));
+    EXPECT_EQ(exchange_uds_request(client,
+                                   *server_connection,
+                                   activation_session,
+                                   uds_state,
+                                   data_identifiers,
+                                   {0x2E, 0xF1, 0xA0, 0x11, 0x22, 0x33, 0x44}),
+              (std::vector<std::uint8_t>{0x7F, 0x2E, 0x7E}));
+    EXPECT_EQ(exchange_uds_request(client,
+                                   *server_connection,
+                                   activation_session,
+                                   uds_state,
+                                   data_identifiers,
+                                   {0x10, 0x03}),
+              (std::vector<std::uint8_t>{0x50, 0x03, 0x00, 0x32, 0x01, 0xF4}));
+    EXPECT_EQ(exchange_uds_request(client,
+                                   *server_connection,
+                                   activation_session,
+                                   uds_state,
+                                   data_identifiers,
+                                   {0x2E, 0xF1, 0xA0, 0x11, 0x22, 0x33, 0x44}),
+              (std::vector<std::uint8_t>{0x6E, 0xF1, 0xA0}));
+    EXPECT_EQ(exchange_uds_request(client,
+                                   *server_connection,
+                                   activation_session,
+                                   uds_state,
+                                   data_identifiers,
+                                   {0x22, 0xF1, 0xA0}),
+              (std::vector<std::uint8_t>{0x62, 0xF1, 0xA0, 0x11, 0x22, 0x33, 0x44}));
 }

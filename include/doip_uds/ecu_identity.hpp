@@ -3,16 +3,27 @@
 #include <array>
 #include <cstdint>
 #include <filesystem>
+#include <vector>
 
 #include "doip_uds/vehicle_identification.hpp"
 
 namespace doip_uds {
+
+inline constexpr std::uint16_t kVinDataIdentifier = 0xF190;
+
+struct EcuDidConfiguration {
+    std::uint16_t identifier{};
+    std::vector<std::uint8_t> initial_value;
+    bool readable{};
+    bool writable{};
+};
 
 struct EcuIdentity {
     std::array<std::uint8_t, kDoipVinSize> vin{};
     std::uint16_t logical_address{};
     std::array<std::uint8_t, kDoipEntityIdSize> eid{};
     std::array<std::uint8_t, kDoipEntityIdSize> gid{};
+    std::vector<EcuDidConfiguration> dids;
 };
 
 /// Loads and validates the required ECU identity fields from a JSON file.

@@ -8,6 +8,7 @@
 #include <fstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include <gtest/gtest.h>
 
@@ -44,9 +45,10 @@ private:
 std::string make_config(const std::string& vin = "WVWZZZ00000000001",
                         const std::string& logical_address = "0x1001",
                         const std::string& eid = "00:00:00:00:00:01",
-                        const std::string& gid = "00:00:00:00:00:02") {
+                        const std::string& gid = "00:00:00:00:00:02",
+                        const std::string& dids = "[]") {
     return "{\"logical_address\":\"" + logical_address + "\",\"vin\":\"" + vin +
-           "\",\"eid\":\"" + eid + "\",\"gid\":\"" + gid + "\"}";
+           "\",\"eid\":\"" + eid + "\",\"gid\":\"" + gid + "\",\"dids\":" + dids + "}";
 }
 
 std::string load_error(const std::string& contents) {
@@ -78,6 +80,85 @@ TEST(EcuIdentity, LoadsAndDecodesValidConfiguration) {
     EXPECT_EQ(identity.logical_address, 0x1001);
     EXPECT_EQ(identity.eid, expected_eid);
     EXPECT_EQ(identity.gid, expected_gid);
+    EXPECT_TRUE(identity.dids.empty());
+}
+
+TEST(EcuIdentity, LoadsConfiguredDataIdentifiers) {
+    const TemporaryConfig config(make_config(
+        "WVWZZZ00000000001",
+        "0x1001",
+        "00:00:00:00:00:01",
+        "00:00:00:00:00:02",
+        "[{\"identifier\":\"0xF1A0\",\"initial_value\":[0,1,254,255],"
+        "\"readable\":true,\"writable\":true}]"));
+
+    const auto identity = doip_uds::load_ecu_identity(config.path());
+
+    ASSERT_EQ(identity.dids.size(), 1U);
+    EXPECT_EQ(identity.dids[0].identifier, 0xF1A0);
+    EXPECT_EQ(identity.dids[0].initial_value,
+              (std::vector<std::uint8_t>{0x00, 0x01, 0xFE, 0xFF}));
+    EXPECT_TRUE(identity.dids[0].readable);
+    EXPECT_TRUE(identity.dids[0].writable);
+}
+
+TEST(EcuIdentity, RejectsInvalidDidConfiguration) {
+    const std::string valid_did =
+        "{\"identifier\":\"0xF1A0\",\"initial_value\":[0,0,0,0],"
+        "\"readable\":true,\"writable\":true}";
+    EXPECT_NE(load_error(make_config("WVWZZZ00000000001",
+                                     "0x1001",
+                                     "00:00:00:00:00:01",
+                                     "00:00:00:00:00:02",
+                                     "null"))
+                  .find("'dids' must be an array"),
+              std::string::npos);
+    EXPECT_NE(load_error(make_config("WVWZZZ00000000001",
+                                     "0x1001",
+                                     "00:00:00:00:00:01",
+                                     "00:00:00:00:00:02",
+                                     "[{}]"))
+                  .find("'identifier'"),
+              std::string::npos);
+    EXPECT_NE(load_error(make_config("WVWZZZ00000000001",
+                                     "0x1001",
+                                     "00:00:00:00:00:01",
+                                     "00:00:00:00:00:02",
+                                     "[{\"identifier\":\"0xF190\",\"initial_value\":[1],"
+                                     "\"readable\":true,\"writable\":false}]"))
+                  .find("cannot override"),
+              std::string::npos);
+    EXPECT_NE(load_error(make_config("WVWZZZ00000000001",
+                                     "0x1001",
+                                     "00:00:00:00:00:01",
+                                     "00:00:00:00:00:02",
+                                     "[{\"identifier\":\"0xF1A0\",\"initial_value\":[],"
+                                     "\"readable\":true,\"writable\":true}]"))
+                  .find("non-empty array"),
+              std::string::npos);
+    EXPECT_NE(load_error(make_config("WVWZZZ00000000001",
+                                     "0x1001",
+                                     "00:00:00:00:00:01",
+                                     "00:00:00:00:00:02",
+                                     "[{\"identifier\":\"0xF1A0\",\"initial_value\":[256],"
+                                     "\"readable\":true,\"writable\":true}]"))
+                  .find("between 0 and 255"),
+              std::string::npos);
+    EXPECT_NE(load_error(make_config("WVWZZZ00000000001",
+                                     "0x1001",
+                                     "00:00:00:00:00:01",
+                                     "00:00:00:00:00:02",
+                                     "[" + valid_did + "," + valid_did + "]"))
+                  .find("duplicate identifier"),
+              std::string::npos);
+    EXPECT_NE(load_error(make_config("WVWZZZ00000000001",
+                                     "0x1001",
+                                     "00:00:00:00:00:01",
+                                     "00:00:00:00:00:02",
+                                     "[{\"identifier\":\"0xF1A0\",\"initial_value\":[0],"
+                                     "\"readable\":false,\"writable\":false}]"))
+                  .find("must be readable"),
+              std::string::npos);
 }
 
 TEST(EcuIdentity, ReportsMissingFieldsAndInvalidJson) {

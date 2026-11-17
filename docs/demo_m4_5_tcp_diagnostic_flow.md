@@ -54,10 +54,10 @@ Then run the M4.5 TCP client:
 
 The TCP client sends a Default Routing Activation Request for tester
 `0x0E00`, checks the success response, sends UDS bytes `22 F1 90` to ECU
-`0x1001`, then checks the DoIP ACK and the separate UDS negative response
-`7F 22 11`. Service `0x22` is not implemented yet. Leave the capture running
-briefly after the client exits to record the TCP disconnection, then stop
-`dumpcap` and the server with **Ctrl+C**.
+`0x1001`, then checks the DoIP ACK and the separate UDS VIN response `62 F1 90`
+with the configured VIN. Leave the capture running briefly after the client
+exits to record the TCP disconnection, then stop `dumpcap` and the server with
+**Ctrl+C**.
 
 ## What to observe in the capture
 
@@ -74,11 +74,11 @@ show both transports. The trace should include the following:
 | Routing Activation Response | TCP / `0x0006` | Tester `0x0E00`, ECU `0x1001`, code `0x10` |
 | Diagnostic Message | TCP / `0x8001` | Source `0x0E00`, target `0x1001`, UDS bytes `22 F1 90` |
 | Diagnostic Message ACK | TCP / `0x8002` | Source `0x1001`, target `0x0E00`, code `0x00` |
-| UDS response | TCP / `0x8001` | Source `0x1001`, target `0x0E00`, bytes `7F 22 11` (service unsupported) |
+| UDS response | TCP / `0x8001` | Source `0x1001`, target `0x0E00`, bytes `62 F1 90` followed by the configured VIN |
 | TCP disconnection | TCP | Graceful connection teardown after the UDS response (FIN/ACK packets) |
 
-The DoIP ACK confirms transport acceptance. The M5 dispatcher then returns
-`7F 22 11` because UDS service `0x22` is not supported.
+The DoIP ACK confirms transport acceptance. M6 adds the `0x22` service; the
+dispatcher returns the configured VIN for DID `0xF190`.
 
 Open the M4.5 capture:
 
