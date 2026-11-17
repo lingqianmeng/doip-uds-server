@@ -4,8 +4,11 @@
 #include <array>
 #include <cctype>
 #include <fstream>
+#include <set>
 #include <stdexcept>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
@@ -28,6 +31,108 @@ std::string required_string(const Json& config, const char* name) {
         throw std::runtime_error(std::string("Configuration field '") + name + "' must be a string");
     }
     return field.get<std::string>();
+}
+
+int hex_value(char character);
+
+bool required_boolean(const Json& config, const char* name) {
+    const Json& field = required_field(config, name);
+    if (!field.is_boolean()) {
+        throw std::runtime_error(std::string("Configuration field '") + name + "' must be a boolean");
+    }
+    return field.get<bool>();
+}
+
+std::uint16_t parse_did_identifier(const Json& field) {
+    if (!field.is_string()) {
+        throw std::runtime_error("DID configuration field 'identifier' must be a string");
+    }
+    const auto value = field.get<std::string>();
+    if (value.size() != 6 || value[0] != '0' ||
+        (value[1] != 'x' && value[1] != 'X')) {
+        throw std::runtime_error(
+            "DID configuration field 'identifier' must be a 16-bit hexadecimal string such as 0xF1A0");
+    }
+
+    std::uint16_t identifier = 0;
+    for (std::size_t index = 2; index < value.size(); ++index) {
+        const int digit = hex_value(value[index]);
+        if (digit < 0) {
+            throw std::runtime_error(
+                "DID configuration field 'identifier' must be a 16-bit hexadecimal string such as 0xF1A0");
+        }
+        identifier =
+            static_cast<std::uint16_t>((identifier << 4U) | static_cast<std::uint16_t>(digit));
+    }
+    return identifier;
+}
+
+std::vector<std::uint8_t> parse_did_value(const Json& field) {
+    if (!field.is_array() || field.empty()) {
+        throw std::runtime_error(
+            "DID configuration field 'initial_value' must be a non-empty array of bytes");
+    }
+
+    std::vector<std::uint8_t> value;
+    value.reserve(field.size());
+    for (const auto& byte : field) {
+        if (byte.is_number_unsigned()) {
+            const auto number = byte.get<std::uint64_t>();
+            if (number > 0xFFU) {
+                throw std::runtime_error(
+                    "DID configuration field 'initial_value' bytes must be between 0 and 255");
+            }
+            value.push_back(static_cast<std::uint8_t>(number));
+        } else if (byte.is_number_integer()) {
+            const auto number = byte.get<std::int64_t>();
+            if (number < 0 || number > 0xFF) {
+                throw std::runtime_error(
+                    "DID configuration field 'initial_value' bytes must be between 0 and 255");
+            }
+            value.push_back(static_cast<std::uint8_t>(number));
+        } else {
+            throw std::runtime_error(
+                "DID configuration field 'initial_value' must contain only integer bytes");
+        }
+    }
+    return value;
+}
+
+std::vector<EcuDidConfiguration> parse_dids(const Json& config) {
+    const auto field = config.find("dids");
+    if (field == config.end()) {
+        return {};
+    }
+    if (!field->is_array()) {
+        throw std::runtime_error("Configuration field 'dids' must be an array");
+    }
+
+    std::vector<EcuDidConfiguration> dids;
+    std::set<std::uint16_t> identifiers;
+    dids.reserve(field->size());
+    for (const auto& did : *field) {
+        if (!did.is_object()) {
+            throw std::runtime_error("Each entry in configuration field 'dids' must be an object");
+        }
+        const auto identifier = parse_did_identifier(required_field(did, "identifier"));
+        if (identifier == kVinDataIdentifier) {
+            throw std::runtime_error(
+                "Configuration field 'dids' cannot override the built-in VIN DID 0xF190");
+        }
+        if (!identifiers.insert(identifier).second) {
+            throw std::runtime_error("Configuration field 'dids' contains a duplicate identifier");
+        }
+
+        auto initial_value = parse_did_value(required_field(did, "initial_value"));
+        const bool readable = required_boolean(did, "readable");
+        const bool writable = required_boolean(did, "writable");
+        if (!readable && !writable) {
+            throw std::runtime_error(
+                "Each configured DID must be readable, writable, or both");
+        }
+        dids.push_back({identifier, std::move(initial_value), readable, writable});
+    }
+    return dids;
 }
 
 bool is_valid_vin_character(unsigned char character) {
@@ -152,7 +257,8 @@ EcuIdentity load_ecu_identity(const std::filesystem::path& config_path) {
     const auto logical_address = parse_logical_address(required_string(config, "logical_address"));
     const auto eid = parse_identifier(required_string(config, "eid"), "eid");
     const auto gid = parse_identifier(required_string(config, "gid"), "gid");
-    return EcuIdentity{vin, logical_address, eid, gid};
+    const auto dids = parse_dids(config);
+    return EcuIdentity{vin, logical_address, eid, gid, dids};
 }
 
 }  // namespace doip_uds

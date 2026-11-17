@@ -75,5 +75,6 @@ cmake --build --preset debug
 ctest --preset debug --output-on-failure -R "UdsDispatcher|DiagnosticFlowTcp"
 ```
 
-Out of scope are DID services (`0x22`/`0x2E`), SecurityAccess (`0x27`), real
-hardware or process reset, and inactivity timers.
+Out of scope for M5 were DID services (`0x22`/`0x2E`), SecurityAccess
+(`0x27`), real hardware or process reset, and inactivity timers. M6 adds the
+initial DID services; see the [M6 DID services guide](m6_did_services.md).

@@ -4,7 +4,7 @@
 
 A C++17 project for building a simulated ECU diagnostic server using DoIP (ISO 13400-2) and UDS (ISO 14229-1), with Raspberry Pi as a target platform.
 
-> **Current status:** M3.5 UDP discovery, M4.1–M4.5 TCP transport and diagnostic flow, and M5.1–M5.2 UDS SessionControl, TesterPresent, and simulated ECUReset are implemented. The server handles UDP discovery on port 13400 and accepts multiple concurrent TCP clients, with a local 16 MiB per-frame payload limit. Other UDS services remain upcoming.
+> **Current status:** M3.5 UDP discovery, M4.1–M4.5 TCP transport and diagnostic flow, M5.1–M5.2 UDS SessionControl, TesterPresent, and simulated ECUReset, and M6.1–M6.2 UDS DataIdentifier services are implemented. The server handles UDP discovery on port 13400 and accepts multiple concurrent TCP clients, with a local 16 MiB per-frame payload limit. Further UDS services remain upcoming.
 
 ## Project layout
 
@@ -87,7 +87,8 @@ has type `0x0004` and contains the same identity fields.
 The server responds to UDP vehicle-identification requests and TCP routing
 activation requests. After acknowledging a valid diagnostic message at the
 DoIP transport layer, it dispatches UDS SessionControl (`0x10`), TesterPresent
-(`0x3E`), or simulated ECUReset (`0x11`) requests.
+(`0x3E`), simulated ECUReset (`0x11`), ReadDataByIdentifier (`0x22`), and
+WriteDataByIdentifier (`0x2E`) requests.
 
 To see the TCP additions, the [M4.1 demo](docs/demo_m4_1_tcp_connections.md)
 shows TCP connections and concurrent clients alongside UDP discovery, while
@@ -99,9 +100,11 @@ activation success and rejection responses over separate TCP connections. The
 message ACK/NACK behavior after activation.
 The [M4.5 demo](docs/demo_m4_5_tcp_diagnostic_flow.md) captures startup VAMs
 and a VIR/VAM discovery exchange alongside the connect → activation →
-diagnostic-message ACK exchange on one TCP connection.
+diagnostic-message ACK and UDS VIN-read exchange on one TCP connection.
 The dedicated [M5 demo](docs/demo_m5_uds_services.md) shows the separate DoIP
 ACK and UDS responses for the three initial UDS services.
+The [M6 DID services demo](docs/demo_m6_did_services.md) reads the configured
+VIN and simulated DID, then demonstrates extended-session DID writes.
 
 Without presets, a debug build can be configured explicitly:
 
@@ -123,10 +126,11 @@ The core library exposes DoIP and vehicle-identification codecs, UDP/TCP
 transport, routing activation, diagnostic-message policy, and a
 transport-independent UDS dispatcher with per-connection session state. The
 executable handles UDP discovery and TCP routing activation, sends DoIP
-Diagnostic Message ACK/NACK frames, then dispatches the M5 UDS services and
-sends any UDS response in a reverse-addressed Diagnostic Message. ECUReset is
-simulated and does not restart the process. M3.1 and M3.2 standards-specific
-checks are based on the project's local reference copy of ISO 13400-2:2012(E).
+Diagnostic Message ACK/NACK frames, then dispatches the M5 and M6 UDS services
+and sends any UDS response in a reverse-addressed Diagnostic Message. ECUReset
+is simulated and does not restart the process. M3.1 and M3.2
+standards-specific checks are based on the project's local reference copy of
+ISO 13400-2:2012(E).
 M4.3 and M4.4 implement version-0x02 message formats and selected address
 policies; they do not claim complete conformance to this or later editions.
 See [`docs/m3_2_ecu_identity_configuration.md`](docs/m3_2_ecu_identity_configuration.md),
@@ -158,12 +162,14 @@ Implement protocol logic in the core library, keeping the executable entry point
   - [x] **M4.1 — TCP transport:** add a cross-platform TCP listener on DoIP port 13400 and manage accepted connections. **Done when:** connection lifecycle and shutdown are tested, and the supported client/session policy is documented. See the [m4_1_tcp_transport](docs/m4_1_tcp_transport.md) and [demo_m4_1_tcp_connections](docs/demo_m4_1_tcp_connections.md).
   - [x] **M4.2 — TCP message framing:** assemble complete DoIP messages from the TCP byte stream using the generic header. **Done when:** fragmented headers/payloads, multiple messages in one read, and invalid or oversized lengths are handled and tested. See the [m4_2_tcp_message_framing](docs/m4_2_tcp_message_framing.md) and [demo_m4_2_tcp_message_framing](docs/demo_m4_2_tcp_message_framing.md).
   - [x] **M4.3 — Routing activation:** encode/decode Routing Activation Request (`0x0005`) and Response (`0x0006`), apply the selected Default-activation and test-equipment-address policies, and track activation per connection. The server rejects unsupported activation types and duplicate active addresses. See the [m4_3_routing_activation](docs/m4_3_routing_activation.md).
-  - [x] **M4.4 — Diagnostic-message transport:** accept Diagnostic Messages (`0x8001`) only after activation, require the source to match the active tester and the target to match the configured ECU, and send ACK (`0x8002`) or NACK (`0x8003`) responses. Accepted UDS bytes remain uninterpreted and available to a future UDS layer. See the [m4_4_diagnostic_message_transport](docs/m4_4_diagnostic_message_transport.md) and [demo_m4_4_diagnostic_message_transport](docs/demo_m4_4_diagnostic_message_transport.md).
+  - [x] **M4.4 — Diagnostic-message transport:** accept Diagnostic Messages (`0x8001`) only after activation, require the source to match the active tester and the target to match the configured ECU, and send ACK (`0x8002`) or NACK (`0x8003`) responses. M4.4 preserves accepted UDS bytes for the dispatcher added in M5. See the [m4_4_diagnostic_message_transport](docs/m4_4_diagnostic_message_transport.md) and [demo_m4_4_diagnostic_message_transport](docs/demo_m4_4_diagnostic_message_transport.md).
   - [x] **M4.5 — Integration and usage:** verify TCP connect → routing activation → diagnostic-message flow on one connection and document the live exchange. The integration test checks the routing response, diagnostic ACK, and preserved UDS bytes. See the [m4_5_tcp_diagnostic_flow](docs/m4_5_tcp_diagnostic_flow.md) and [demo_m4_5_tcp_diagnostic_flow](docs/demo_m4_5_tcp_diagnostic_flow.md).
 - [x] M5 UDS dispatcher, 0x10 / 0x3E / 0x11
   - [x] **M5.1 — Define the UDS boundary:** agreed on the dispatcher interface, per-connection UDS state, the DoIP ACK versus UDS response flow, supported subfunctions, timing values, and negative-response behavior. See the [M5 UDS boundary](docs/m5_uds_dispatcher.md).
   - [x] **M5.2 — Build the UDS services:** implemented SessionControl (`0x10`), TesterPresent (`0x3E`), and simulated ECUReset (`0x11`); integrated the dispatcher with TCP diagnostics; added unit and integration tests; and provided one M5 guide and one dedicated M5 demo. See the [M5 UDS dispatcher guide](docs/m5_uds_dispatcher.md) and [M5 UDS services demo](docs/demo_m5_uds_services.md).
-- [ ] M6 0x22 / 0x2E
+- [x] M6 UDS DataIdentifier services, 0x22 / 0x2E
+  - [x] **M6.1 — Define the DID boundary:** agreed on the initial DID catalog, read/write access, multi-DID reads, in-memory write behavior, session rules, and negative responses. See the [M6 DID boundary](docs/m6_did_services.md).
+  - [x] **M6.2 — Build the DID services:** implemented ReadDataByIdentifier (`0x22`) and WriteDataByIdentifier (`0x2E`) against the agreed DID model; added unit/integration tests and a dedicated M6 demo. See the [M6 DID services guide](docs/m6_did_services.md) and [M6 DID services demo](docs/demo_m6_did_services.md).
 - [ ] M7 0x19 / 0x14
 - [ ] M8 0x27 SecurityAccess
 - [ ] M9 Python tester and integration tests
@@ -174,5 +180,6 @@ payload and configuration components to end-to-end discovery. M4.1–M4.5 are
 complete, adding TCP transport, message framing, routing activation,
 diagnostic-message acknowledgement, and the integrated TCP diagnostic flow.
 M5.1 defined and reviewed the UDS boundary; M5.2 implemented the three initial
-services under one milestone and one dedicated demo. Additional UDS services
-remain upcoming.
+services under one milestone and one dedicated demo. M6.1 defined the DID
+boundary; M6.2 implemented `0x22` and `0x2E` with a dedicated guide and demo.
+Additional UDS services remain upcoming.

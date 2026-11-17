@@ -19,8 +19,10 @@ address, and fixed-size EID and GID byte arrays.
 ```
 
 `logical_address`, `vin`, `eid`, and `gid` are required JSON strings.
-Additional fields such as `dids` and `dtcs` are ignored by M3.2 because those
-belong to later diagnostic-service milestones.
+M3.2 originally ignored additional fields such as `dids` and `dtcs` because
+they belonged to later diagnostic-service milestones. M6 now loads the `dids`
+array to initialize the simulated DataIdentifier services; see the
+[M6 DID services guide](m6_did_services.md) for its entry schema.
 
 - **VIN:** exactly 17 uppercase VIN characters (`0-9`, `A-H`, `J-N`, `P`,
   `R-Z`); the all-zero and all-`0xFF` invalidity values are not accepted.

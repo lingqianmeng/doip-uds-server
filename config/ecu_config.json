@@ -3,6 +3,13 @@
   "vin": "WVWZZZ00000000001",
   "eid": "00:00:00:00:00:01",
   "gid": "00:00:00:00:00:01",
-  "dids": [],
+  "dids": [
+    {
+      "identifier": "0xF1A0",
+      "initial_value": [0, 0, 0, 0],
+      "readable": true,
+      "writable": true
+    }
+  ],
   "dtcs": []
 }

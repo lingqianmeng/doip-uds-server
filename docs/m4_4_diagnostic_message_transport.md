@@ -1,9 +1,9 @@
 # m4_4_diagnostic_message_transport
 
 M4.4 adds Diagnostic Message (`0x8001`) decoding, logical-address checks,
-positive/negative acknowledgements, and a handoff point for future UDS
-processing. It implements the version-0x02 message format and selected
-single-ECU routing policy; it does not claim complete DoIP conformance.
+positive/negative acknowledgements, and a handoff to UDS processing. It
+implements the version-0x02 message format and selected single-ECU routing
+policy; it does not claim complete DoIP conformance.
 
 ## Message handling
 
@@ -22,16 +22,17 @@ The server applies these checks in order:
   the server sends NACK code `0x03` (unknown target address).
 - A valid message receives a Diagnostic Message ACK (`0x8002`) with code
   `0x00`. Its user data is returned in `accepted_message` for the caller to
-  hand to a future UDS dispatcher.
+  hand to the UDS dispatcher.
 
 ACK and NACK payloads contain the ECU source address, tester target address,
 and response code. The optional previous-message data field is omitted.
 Diagnostic payloads shorter than five bytes are malformed; only that TCP
 connection is closed.
 
-M5 builds on this handoff: the server sends the DoIP ACK first, then passes
-accepted user data to the UDS dispatcher and sends any UDS response as a
-separate reverse-addressed Diagnostic Message.
+M5 added the dispatcher handoff: the server sends the DoIP ACK first, then
+passes accepted user data to the UDS dispatcher. M6 adds the `0x22`/`0x2E`
+DID service behavior; any resulting UDS response is a separate
+reverse-addressed Diagnostic Message.
 
 ## Tests and demo
 

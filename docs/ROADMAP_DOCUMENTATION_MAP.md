@@ -28,6 +28,7 @@ For milestones without a minor number, omit that segment (for example,
 | M4.4 — Diagnostic-message transport | [m4_4_diagnostic_message_transport](m4_4_diagnostic_message_transport.md) and [demo_m4_4_diagnostic_message_transport](demo_m4_4_diagnostic_message_transport.md) | Adds activated-session and logical-address checks, diagnostic ACK/NACK responses, preserved UDS payload handoff, tests, and a dedicated transport demo. |
 | M4.5 — TCP diagnostic flow integration and usage | [m4_5_tcp_diagnostic_flow](m4_5_tcp_diagnostic_flow.md) and [demo_m4_5_tcp_diagnostic_flow](demo_m4_5_tcp_diagnostic_flow.md) | Verifies activation and diagnostic ACK on one TCP connection with an integration test and dedicated live demo. |
 | M5 — UDS dispatcher and basic services | [m5_uds_dispatcher](m5_uds_dispatcher.md) and [demo_m5_uds_services](demo_m5_uds_services.md) | Adds per-connection diagnostic-session state, SessionControl, TesterPresent, simulated ECUReset, tests, and one dedicated services demo. |
+| M6 — UDS DataIdentifier services | [m6_did_services](m6_did_services.md) and [demo_m6_did_services](demo_m6_did_services.md) | Defines the DID boundary, reads configured VIN and writable DIDs, supports extended-session writes with process-local state, and includes unit/integration tests and a live demo. |
 
 The M3 breakdown itself was recorded in the README in PR #5. The detailed
 guides explain the implementation and tests for individual features; the
@@ -35,13 +36,12 @@ README remains the top-level overview and setup guide.
 
 ## Upcoming roadmap steps
 
-M4.1–M5 are complete and have guides. M6–M10 are upcoming. M5 was delivered as
-one milestone in two sub-milestones: M5.1 defined and reviewed the UDS boundary,
-and M5.2 implemented the initial services with one guide and one dedicated
-demo. When a step is implemented, add or update its guide and update this table
-in the same PR. A dedicated guide is useful when a feature needs more
-explanation than belongs in the README; it does not need to be created for
-every small PR.
+M4.1–M6 are complete and have guides. M7–M10 are upcoming. M5 and M6 were each
+delivered as one milestone in two sub-milestones: a boundary-definition phase
+followed by implementation with one guide and one dedicated demo. When a step
+is implemented, add or update its guide and update this table in the same PR.
+A dedicated guide is useful when a feature needs more explanation than belongs
+in the README; it does not need to be created for every small PR.
 
 ## How to verify the history
 

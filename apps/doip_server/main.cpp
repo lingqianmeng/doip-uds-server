@@ -39,6 +39,7 @@ struct TcpClientSession {
 void process_tcp_message(TcpClientSession& client,
                          const std::vector<TcpClientSession>& clients,
                          const doip_uds::EcuIdentity& identity,
+                         doip_uds::UdsDataIdentifierStore& data_identifiers,
                          const std::vector<std::uint8_t>& message) {
     const auto header = doip_uds::decode_doip_header(message.data(), message.size());
     if (!header) {
@@ -107,7 +108,7 @@ void process_tcp_message(TcpClientSession& client,
                   << static_cast<unsigned int>(result.response_code) << std::dec << '\n';
 
         const auto uds_result = doip_uds::dispatch_uds_request(
-            result.accepted_message->user_data, client.uds_state);
+            result.accepted_message->user_data, client.uds_state, data_identifiers);
         if (uds_result.reset_requested == doip_uds::UdsEcuResetType::hard_reset) {
             std::cout << "[UDS] Simulated ECU hard reset; session returned to default\n";
         }
@@ -136,6 +137,7 @@ void process_tcp_message(TcpClientSession& client,
 
 void accept_tcp_connections(doip_uds::TcpListener& listener,
                             const doip_uds::EcuIdentity& identity,
+                            doip_uds::UdsDataIdentifierStore& data_identifiers,
                             const std::atomic<bool>& tcp_failed) {
     std::vector<TcpClientSession> connections;
     constexpr auto kAcceptTimeout = std::chrono::milliseconds(100);
@@ -169,7 +171,8 @@ void accept_tcp_connections(doip_uds::TcpListener& listener,
                     if (!message) {
                         break;
                     }
-                    process_tcp_message(client, connections, identity, *message);
+                    process_tcp_message(
+                        client, connections, identity, data_identifiers, *message);
                 }
 
                 if (!client.connection.is_connected()) {
@@ -203,8 +206,10 @@ int main(int argc, char* argv[]) {
 
     const std::string config_path = argc == 2 ? argv[1] : "config/ecu_config.json";
     doip_uds::EcuIdentity identity;
+    doip_uds::UdsDataIdentifierStore data_identifiers;
     try {
         identity = doip_uds::load_ecu_identity(config_path);
+        data_identifiers = doip_uds::make_uds_data_identifier_store(identity);
         std::cout << "doip_server " << doip_uds::version()
                   << " loaded ECU identity at logical address 0x" << std::hex << std::uppercase
                   << std::setw(4) << std::setfill('0') << identity.logical_address << '\n';
@@ -227,7 +232,7 @@ int main(int argc, char* argv[]) {
         std::atomic<bool> tcp_failed{false};
         std::thread tcp_acceptor([&] {
             try {
-                accept_tcp_connections(tcp_listener, identity, tcp_failed);
+                accept_tcp_connections(tcp_listener, identity, data_identifiers, tcp_failed);
             } catch (...) {
                 tcp_error = std::current_exception();
                 tcp_failed.store(true);

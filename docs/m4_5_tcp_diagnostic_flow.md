@@ -11,10 +11,11 @@ The TCP integration test keeps one connection open for both Routing Activation
 Request (`0x0005`) and Diagnostic Message (`0x8001`). It verifies that the
 successful activation state is then used to accept the diagnostic message,
 that the ACK (`0x8002`) has the expected addresses and code, and that the UDS
-bytes remain unchanged. The test also verifies the M5 TesterPresent response
-(`7E 00`) as a separate Diagnostic Message after the DoIP ACK. The test
-composes the core handlers over a real loopback TCP connection; the separate
-live-server demo exercises the executable's dispatch path.
+bytes remain unchanged. It verifies the M5 TesterPresent response and M6
+multi-DID read/write responses as separate Diagnostic Messages after their
+DoIP ACKs. The test composes the core handlers over a real loopback TCP
+connection; the separate live-server demo exercises the executable's dispatch
+path.
 
 Run the focused integration test from the repository root:
 
@@ -29,6 +30,6 @@ See the separate [M4.5 TCP diagnostic-flow demo](demo_m4_5_tcp_diagnostic_flow.m
 for the server, PowerShell client, and Wireshark capture steps. The demo shows
 the activation response followed by the diagnostic ACK on the same connection.
 The ACK confirms DoIP transport acceptance. With M5, the server follows it
-with a UDS response message when a positive response is required. This demo
-sends unsupported service `0x22`, so the expected UDS response is `7F 22 11`;
-see the M5 demo for supported UDS services.
+with a UDS response message when a response is required. The demo reads DID
+`0xF190` with service `0x22`, so the expected response is `62 F1 90` followed
+by the configured VIN; see the M6 demo for DID reads and writes.

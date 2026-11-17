@@ -16,7 +16,8 @@ const doip_uds::EcuIdentity kIdentity{
     {'W', 'V', 'W', 'Z', 'Z', 'Z', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1'},
     0x1001,
     {0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
-    {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF}};
+    {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF},
+    {}};
 
 std::vector<std::uint8_t> make_request(
     const doip_uds::VehicleIdentificationRequestMessage& request) {
