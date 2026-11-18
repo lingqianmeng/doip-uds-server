@@ -91,8 +91,9 @@ DoIP transport layer, it dispatches UDS SessionControl (`0x10`), TesterPresent
 WriteDataByIdentifier (`0x2E`) requests.
 ReadDTCInformation (`0x19`) supports status-masked count and record reports,
 and ClearDiagnosticInformation (`0x14`) clears all configured synthetic DTCs
-in extended session. SecurityAccess (`0x27`) demonstrates a simulator-only
-seed/key exchange and gates writes to the sample writable DID.
+in extended session. SecurityAccess (`0x27`) demonstrates the poster-listed
+Bootloader and AirbagDeployment seed/key pairs and gates writes to the sample
+writable DID.
 
 To see the TCP additions, the [M4.1 demo](docs/demo_m4_1_tcp_connections.md)
 shows TCP connections and concurrent clients alongside UDP discovery, while

@@ -177,14 +177,14 @@ try {
         -Label "Reject DID write before SecurityAccess"
 
     Send-DiagnosticRequest -Stream $stream -TesterAddress $testerAddress `
-        -EntityAddress $entityAddress -UdsRequest ([byte[]](0x27, 0x01)) `
-        -ExpectedUdsResponse ([byte[]](0x67, 0x01, 0x12, 0x34)) `
-        -Label "Request simulator security seed"
+        -EntityAddress $entityAddress -UdsRequest ([byte[]](0x27, 0x5f)) `
+        -ExpectedUdsResponse ([byte[]](0x67, 0x5f, 0x00, 0x00, 0x12, 0x34)) `
+        -Label "Request AirbagDeployment security seed"
 
     Send-DiagnosticRequest -Stream $stream -TesterAddress $testerAddress `
-        -EntityAddress $entityAddress -UdsRequest ([byte[]](0x27, 0x02, 0xb7, 0xf7)) `
-        -ExpectedUdsResponse ([byte[]](0x67, 0x02)) `
-        -Label "Unlock simulator security level"
+        -EntityAddress $entityAddress -UdsRequest ([byte[]](0x27, 0x60, 0x00, 0x00, 0xb7, 0xf7)) `
+        -ExpectedUdsResponse ([byte[]](0x67, 0x60)) `
+        -Label "Unlock AirbagDeployment security level"
 
     Send-DiagnosticRequest -Stream $stream -TesterAddress $testerAddress `
         -EntityAddress $entityAddress -UdsRequest ([byte[]](0x2e, 0xf1, 0xa0, 0x11, 0x22, 0x33, 0x44)) `

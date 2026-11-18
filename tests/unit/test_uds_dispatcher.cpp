@@ -112,7 +112,14 @@ TEST(UdsDispatcher, ReturnsNegativeResponsesForUnsupportedServicesAndSubfunction
 
     const auto unsupported_session = dispatch({0x10, 0x02}, state);
     ASSERT_TRUE(unsupported_session.response.has_value());
-    EXPECT_EQ(*unsupported_session.response, (std::vector<std::uint8_t>{0x7F, 0x10, 0x12}));
+    EXPECT_EQ(*unsupported_session.response,
+              (std::vector<std::uint8_t>{0x50, 0x02, 0x00, 0x32, 0x01, 0xF4}));
+    EXPECT_EQ(state.session, doip_uds::UdsDiagnosticSession::programming_session);
+
+    const auto unsupported_fota_session = dispatch({0x10, 0x05}, state);
+    ASSERT_TRUE(unsupported_fota_session.response.has_value());
+    EXPECT_EQ(*unsupported_fota_session.response,
+              (std::vector<std::uint8_t>{0x7F, 0x10, 0x12}));
 
     const auto unsupported_tester_present = dispatch({0x3E, 0x01}, state);
     ASSERT_TRUE(unsupported_tester_present.response.has_value());
@@ -206,14 +213,18 @@ TEST(UdsDispatcher, WritesDidOnlyInExtendedSessionAndChecksDataLength) {
               (std::vector<std::uint8_t>{0x00, 0x00, 0x00, 0x00}));
 
     const auto seed =
-        dispatch({0x27, 0x01}, state, data_identifiers, dtcs);
+        dispatch({0x27, 0x5F}, state, data_identifiers, dtcs);
     ASSERT_TRUE(seed.response.has_value());
-    EXPECT_EQ(*seed.response, (std::vector<std::uint8_t>{0x67, 0x01, 0x12, 0x34}));
+    EXPECT_EQ(*seed.response,
+              (std::vector<std::uint8_t>{0x67, 0x5F, 0x00, 0x00, 0x12, 0x34}));
 
     const auto unlocked =
-        dispatch({0x27, 0x02, 0xB7, 0xF7}, state, data_identifiers, dtcs);
+        dispatch({0x27, 0x60, 0x00, 0x00, 0xB7, 0xF7},
+                 state,
+                 data_identifiers,
+                 dtcs);
     ASSERT_TRUE(unlocked.response.has_value());
-    EXPECT_EQ(*unlocked.response, (std::vector<std::uint8_t>{0x67, 0x02}));
+    EXPECT_EQ(*unlocked.response, (std::vector<std::uint8_t>{0x67, 0x60}));
     EXPECT_TRUE(state.security_unlocked);
 
     const auto written =
@@ -232,10 +243,10 @@ TEST(UdsDispatcher, SharesDidValuesAcrossConnectionSessions) {
     doip_uds::UdsConnectionState reader;
 
     const auto seed =
-        doip_uds::dispatch_uds_request({0x27, 0x01}, writer, data_identifiers, dtcs);
+        doip_uds::dispatch_uds_request({0x27, 0x5F}, writer, data_identifiers, dtcs);
     ASSERT_TRUE(seed.response.has_value());
     const auto key =
-        doip_uds::dispatch_uds_request({0x27, 0x02, 0xB7, 0xF7},
+        doip_uds::dispatch_uds_request({0x27, 0x60, 0x00, 0x00, 0xB7, 0xF7},
                                        writer,
                                        data_identifiers,
                                        dtcs);
@@ -262,45 +273,85 @@ TEST(UdsDispatcher, HandlesSecurityAccessSequenceAndRejectsInvalidKeys) {
     auto dtcs = make_test_dtcs();
 
     const auto default_session =
-        dispatch({0x27, 0x01}, state, data_identifiers, dtcs);
+        dispatch({0x27, 0x11}, state, data_identifiers, dtcs);
     ASSERT_TRUE(default_session.response.has_value());
-    EXPECT_EQ(*default_session.response, (std::vector<std::uint8_t>{0x7F, 0x27, 0x7E}));
+    EXPECT_EQ(*default_session.response, (std::vector<std::uint8_t>{0x7F, 0x27, 0x22}));
 
     state.session = doip_uds::UdsDiagnosticSession::extended_session;
     const auto key_without_seed =
-        dispatch({0x27, 0x02, 0xB7, 0xF7}, state, data_identifiers, dtcs);
+        dispatch({0x27, 0x60, 0x00, 0x00, 0xB7, 0xF7},
+                 state,
+                 data_identifiers,
+                 dtcs);
     ASSERT_TRUE(key_without_seed.response.has_value());
     EXPECT_EQ(*key_without_seed.response, (std::vector<std::uint8_t>{0x7F, 0x27, 0x24}));
 
-    const auto seed = dispatch({0x27, 0x01}, state, data_identifiers, dtcs);
+    const auto seed = dispatch({0x27, 0x5F}, state, data_identifiers, dtcs);
     ASSERT_TRUE(seed.response.has_value());
-    EXPECT_EQ(*seed.response, (std::vector<std::uint8_t>{0x67, 0x01, 0x12, 0x34}));
+    EXPECT_EQ(*seed.response,
+              (std::vector<std::uint8_t>{0x67, 0x5F, 0x00, 0x00, 0x12, 0x34}));
 
     const auto invalid_key =
-        dispatch({0x27, 0x02, 0x00, 0x00}, state, data_identifiers, dtcs);
+        dispatch({0x27, 0x60, 0x00, 0x00, 0x00, 0x00},
+                 state,
+                 data_identifiers,
+                 dtcs);
     ASSERT_TRUE(invalid_key.response.has_value());
     EXPECT_EQ(*invalid_key.response, (std::vector<std::uint8_t>{0x7F, 0x27, 0x35}));
     EXPECT_FALSE(state.security_unlocked);
 
     const auto consumed_seed =
-        dispatch({0x27, 0x02, 0xB7, 0xF7}, state, data_identifiers, dtcs);
+        dispatch({0x27, 0x60, 0x00, 0x00, 0xB7, 0xF7},
+                 state,
+                 data_identifiers,
+                 dtcs);
     ASSERT_TRUE(consumed_seed.response.has_value());
     EXPECT_EQ(*consumed_seed.response, (std::vector<std::uint8_t>{0x7F, 0x27, 0x24}));
 
-    const auto next_seed = dispatch({0x27, 0x01}, state, data_identifiers, dtcs);
+    const auto next_seed = dispatch({0x27, 0x5F}, state, data_identifiers, dtcs);
     ASSERT_TRUE(next_seed.response.has_value());
-    EXPECT_EQ(*next_seed.response, (std::vector<std::uint8_t>{0x67, 0x01, 0x13, 0x35}));
+    EXPECT_EQ(*next_seed.response,
+              (std::vector<std::uint8_t>{0x67, 0x5F, 0x00, 0x00, 0x13, 0x35}));
 
     const auto correct_key =
-        dispatch({0x27, 0x02, 0xB6, 0xF6}, state, data_identifiers, dtcs);
+        dispatch({0x27, 0x60, 0x00, 0x00, 0xB6, 0xF6},
+                 state,
+                 data_identifiers,
+                 dtcs);
     ASSERT_TRUE(correct_key.response.has_value());
-    EXPECT_EQ(*correct_key.response, (std::vector<std::uint8_t>{0x67, 0x02}));
+    EXPECT_EQ(*correct_key.response, (std::vector<std::uint8_t>{0x67, 0x60}));
     EXPECT_TRUE(state.security_unlocked);
 
-    const auto already_unlocked_seed = dispatch({0x27, 0x01}, state, data_identifiers, dtcs);
+    const auto already_unlocked_seed = dispatch({0x27, 0x5F}, state, data_identifiers, dtcs);
     ASSERT_TRUE(already_unlocked_seed.response.has_value());
     EXPECT_EQ(*already_unlocked_seed.response,
-              (std::vector<std::uint8_t>{0x67, 0x01, 0x00, 0x00}));
+              (std::vector<std::uint8_t>{0x67, 0x5F, 0x00, 0x00, 0x00, 0x00}));
+    EXPECT_TRUE(state.security_unlocked);
+}
+
+TEST(UdsDispatcher, SupportsBootloaderSecurityAccessInProgrammingSession) {
+    doip_uds::UdsConnectionState state;
+    auto data_identifiers = make_test_data_identifiers();
+    auto dtcs = make_test_dtcs();
+
+    const auto wrong_session = dispatch({0x27, 0x11}, state, data_identifiers, dtcs);
+    ASSERT_TRUE(wrong_session.response.has_value());
+    EXPECT_EQ(*wrong_session.response, (std::vector<std::uint8_t>{0x7F, 0x27, 0x22}));
+
+    const auto programming_session = dispatch({0x10, 0x02}, state, data_identifiers, dtcs);
+    ASSERT_TRUE(programming_session.response.has_value());
+    EXPECT_EQ(*programming_session.response,
+              (std::vector<std::uint8_t>{0x50, 0x02, 0x00, 0x32, 0x01, 0xF4}));
+
+    const auto seed = dispatch({0x27, 0x11}, state, data_identifiers, dtcs);
+    ASSERT_TRUE(seed.response.has_value());
+    EXPECT_EQ(*seed.response,
+              (std::vector<std::uint8_t>{0x67, 0x11, 0x00, 0x00, 0x12, 0x34}));
+
+    const auto key =
+        dispatch({0x27, 0x12, 0x00, 0x00, 0xB7, 0xF7}, state, data_identifiers, dtcs);
+    ASSERT_TRUE(key.response.has_value());
+    EXPECT_EQ(*key.response, (std::vector<std::uint8_t>{0x67, 0x12}));
     EXPECT_TRUE(state.security_unlocked);
 }
 
@@ -309,7 +360,7 @@ TEST(UdsDispatcher, ResetsSecurityAccessOnSessionChangeAndEcuReset) {
     auto data_identifiers = make_test_data_identifiers();
     auto dtcs = make_test_dtcs();
     state.session = doip_uds::UdsDiagnosticSession::extended_session;
-    const auto seed = dispatch({0x27, 0x01}, state, data_identifiers, dtcs);
+    const auto seed = dispatch({0x27, 0x5F}, state, data_identifiers, dtcs);
     ASSERT_TRUE(seed.response.has_value());
 
     const auto returned_to_default =
@@ -321,7 +372,10 @@ TEST(UdsDispatcher, ResetsSecurityAccessOnSessionChangeAndEcuReset) {
         dispatch({0x10, 0x03}, state, data_identifiers, dtcs);
     ASSERT_TRUE(reentered_extended.response.has_value());
     const auto stale_key =
-        dispatch({0x27, 0x02, 0xB7, 0xF7}, state, data_identifiers, dtcs);
+        dispatch({0x27, 0x60, 0x00, 0x00, 0xB7, 0xF7},
+                 state,
+                 data_identifiers,
+                 dtcs);
     ASSERT_TRUE(stale_key.response.has_value());
     EXPECT_EQ(*stale_key.response, (std::vector<std::uint8_t>{0x7F, 0x27, 0x24}));
 
@@ -339,7 +393,7 @@ TEST(UdsDispatcher, RejectsMalformedAndUnsupportedSecurityAccessRequests) {
     state.session = doip_uds::UdsDiagnosticSession::extended_session;
 
     const std::vector<std::vector<std::uint8_t>> malformed_requests{
-        {0x27}, {0x27, 0x01, 0x00}, {0x27, 0x02}, {0x27, 0x02, 0x12}};
+        {0x27}, {0x27, 0x5F, 0x00}, {0x27, 0x60}, {0x27, 0x60, 0x12, 0x34, 0x56}};
     for (const auto& request : malformed_requests) {
         const auto result = dispatch(request, state, data_identifiers, dtcs);
         ASSERT_TRUE(result.response.has_value());
@@ -347,7 +401,7 @@ TEST(UdsDispatcher, RejectsMalformedAndUnsupportedSecurityAccessRequests) {
     }
 
     const auto unsupported =
-        dispatch({0x27, 0x03}, state, data_identifiers, dtcs);
+        dispatch({0x27, 0x01}, state, data_identifiers, dtcs);
     ASSERT_TRUE(unsupported.response.has_value());
     EXPECT_EQ(*unsupported.response, (std::vector<std::uint8_t>{0x7F, 0x27, 0x12}));
 }

@@ -383,16 +383,16 @@ TEST(DiagnosticFlowTcp, ActivatesAcknowledgesAndReturnsUdsResponseOnSameConnecti
                                    uds_state,
                                    data_identifiers,
                                    dtcs,
-                                   {0x27, 0x01}),
-              (std::vector<std::uint8_t>{0x67, 0x01, 0x12, 0x34}));
+                                   {0x27, 0x5F}),
+              (std::vector<std::uint8_t>{0x67, 0x5F, 0x00, 0x00, 0x12, 0x34}));
     EXPECT_EQ(exchange_uds_request(client,
                                    *server_connection,
                                    activation_session,
                                    uds_state,
                                    data_identifiers,
                                    dtcs,
-                                   {0x27, 0x02, 0xB7, 0xF7}),
-              (std::vector<std::uint8_t>{0x67, 0x02}));
+                                   {0x27, 0x60, 0x00, 0x00, 0xB7, 0xF7}),
+              (std::vector<std::uint8_t>{0x67, 0x60}));
     EXPECT_EQ(exchange_uds_request(client,
                                    *server_connection,
                                    activation_session,

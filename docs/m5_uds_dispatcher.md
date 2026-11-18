@@ -33,12 +33,15 @@ item with one M5 guide and one dedicated demo.
 
 | Service | Supported request | Response and state behavior |
 |---|---|---|
-| SessionControl (`0x10`) | Exactly two bytes; default (`0x01`) and extended (`0x03`) sessions | Positive response `0x50`, echoed subfunction with the suppress bit cleared, P2Server_max `50 ms`, and P2*Server_max `500` 10-ms units. Change the connection's session. |
+| SessionControl (`0x10`) | Exactly two bytes; default (`0x01`), programming (`0x02`), and extended (`0x03`) sessions | Positive response `0x50`, echoed subfunction with the suppress bit cleared, P2Server_max `50 ms`, and P2*Server_max `500` 10-ms units. Change the connection's session. |
 | TesterPresent (`0x3E`) | Exactly two bytes; subfunction `0x00`, with optional suppress-positive-response bit (`0x80`) | Respond with `0x7E 0x00`, or suppress that positive UDS response. No P3/session timeout is introduced in M5. |
 | ECUReset (`0x11`) | Exactly two bytes; hard reset (`0x01`), with optional suppress-positive-response bit (`0x80`) | Simulate and log the reset request, do not restart the process, and return the session state to default. Respond with `0x51 0x01` unless suppressed. |
 
-Supported services are available in both the default and extended sessions.
-Programming session and reset types other than hard reset are not supported.
+TesterPresent and ECUReset are supported in the default and extended sessions.
+Programming session `0x02` is enabled for the poster-listed Bootloader
+SecurityAccess pair (`0x11`/`0x12`) only; programming routines are not
+implemented. FOTA session `0x05` and reset types other than hard reset are not
+supported.
 
 ## Negative responses
 

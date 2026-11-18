@@ -60,8 +60,8 @@ response then arrives in a separate reverse-addressed Diagnostic Message
 | `2E F1 A0 11 22 33 44` in default session | `7F 2E 7E` |
 | `10 03` | `50 03 00 32 01 F4` |
 | `2E F1 A0 11 22 33 44` in extended session before unlock | `7F 2E 33` |
-| `27 01` | `67 01 12 34` |
-| `27 02 B7 F7` | `67 02` |
+| `27 5F` | `67 5F 00 00 12 34` |
+| `27 60 00 00 B7 F7` | `67 60` |
 | `2E F1 A0 11 22 33 44` after unlock | `6E F1 A0` |
 | `22 F1 A0 F1 90` | `62 F1 A0 11 22 33 44 F1 90` + 17 ASCII VIN bytes |
 | `2E F1 90 00` in extended session | `7F 2E 31` |
