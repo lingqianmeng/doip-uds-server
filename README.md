@@ -4,7 +4,7 @@
 
 A C++17 project for building a simulated ECU diagnostic server using DoIP (ISO 13400-2) and UDS (ISO 14229-1), with Raspberry Pi as a target platform.
 
-> **Current status:** M3.5 UDP discovery, M4.1–M4.5 TCP transport and diagnostic flow, M5.1–M5.2 UDS SessionControl, TesterPresent, and simulated ECUReset, M6.1–M6.2 UDS DataIdentifier services, M7.1–M7.2 UDS DTC services, and M8.1–M8.2 simulator SecurityAccess are implemented. The server handles UDP discovery on port 13400 and accepts multiple concurrent TCP clients, with a local 16 MiB per-frame payload limit.
+> **Current status:** M3.5 UDP discovery, M4.1–M4.5 TCP transport and diagnostic flow, M5.1–M5.2 UDS SessionControl, TesterPresent, and simulated ECUReset, M6.1–M6.2 UDS DataIdentifier services, M7.1–M7.2 UDS DTC services, M8.1–M8.2 simulator SecurityAccess, and M9 Python tester/integration tests are implemented. The server handles UDP discovery on port 13400 and accepts multiple concurrent TCP clients, with a local 16 MiB per-frame payload limit.
 
 ## Project layout
 
@@ -27,9 +27,9 @@ guides by milestone and review their PR history.
 
 ## Build and test
 
-Requirements: CMake 3.21 or newer, Ninja, and a C++17-capable compiler. CMake selects the compiler available in the environment; the presets do not force GCC, MSVC, or a vcpkg triplet.
+Requirements: CMake 3.21 or newer, Ninja, Python 3.7 or newer, and a C++17-capable compiler. CMake selects the compiler available in the environment; the presets do not force GCC, MSVC, or a vcpkg triplet.
 
-GoogleTest is used for unit tests, and `nlohmann/json` parses ECU configuration. CMake uses installed packages if available; otherwise it downloads the dependencies with `FetchContent` during configuration. The fallback therefore requires network access on the first configure. **vcpkg is not used** by the current build.
+GoogleTest is used for C++ unit tests, Python's standard library drives the DoIP integration test, and `nlohmann/json` parses ECU configuration. CMake uses installed packages if available; otherwise it downloads the C++ dependencies with `FetchContent` during configuration. The fallback therefore requires network access on the first configure. **vcpkg is not used** by the current build.
 
 From the repository root:
 
@@ -114,6 +114,8 @@ The [M7 DTC services demo](docs/demo_m7_dtc_services.md) reads synthetic DTC
 counts and records, then clears the runtime DTC set.
 The [M8 SecurityAccess demo](docs/demo_m8_security_access.md) shows the
 simulator seed/key sequence guarding a DID write.
+The [M9 Python tester demo](docs/demo_m9_python_tester.md) exercises the local
+simulator through a standard-library DoIP client.
 
 Without presets, a debug build can be configured explicitly:
 
@@ -128,7 +130,7 @@ ctest --test-dir build/debug --output-on-failure
 1. CMake reads `CMakeLists.txt` and configures a C++17 build with strict warnings.
 2. It creates `doip_uds_core` from the implementation in `src/`, exposing headers under `include/`.
 3. It creates `doip_server` from `apps/doip_server/main.cpp`, linked to the core library.
-4. With `DOIP_BUILD_TESTS=ON` (the default), it finds or downloads GoogleTest, creates `unit_tests` from `tests/unit/` and `integration_tests` from `tests/integration/`, and registers both with CTest.
+4. With `DOIP_BUILD_TESTS=ON` (the default), it finds or downloads GoogleTest, creates the C++ unit/integration test targets, and registers them plus the Python DoIP tester integration test with CTest.
 5. Ninja executes the generated compile and link steps. CTest runs the registered tests.
 
 The core library exposes DoIP and vehicle-identification codecs, UDP/TCP
@@ -186,7 +188,9 @@ Implement protocol logic in the core library, keeping the executable entry point
 - [x] M8 UDS SecurityAccess, 0x27
   - [x] **M8.1 — Define the SecurityAccess boundary:** define the simulator security level, seed/key exchange, per-connection authorization, protected DID operation, state reset behavior, and negative responses. See the [M8 SecurityAccess guide](docs/m8_security_access.md).
   - [x] **M8.2 — Build the SecurityAccess service:** implement the simulator-only `0x27` exchange, guard writable DID access, and add dispatcher/TCP tests and a live demo.
-- [ ] M9 Python tester and integration tests
+- [x] M9 Python tester and integration tests
+  - [x] **M9.1 — Define the tester boundary:** keep the standard-library client local to the simulator, validate DoIP framing and ACK/UDS response sequencing, and avoid arbitrary UDS or key-guessing modes. See the [M9 Python tester guide](docs/m9_python_tester.md).
+  - [x] **M9.2 — Build the tester and integration test:** add the Python smoke-test CLI, configurable loopback/ephemeral server ports, and a CTest integration test. See the [M9 Python tester demo](docs/demo_m9_python_tester.md).
 - [ ] M10 Docker, CodeQL, Trivy
 
 M3 completed the UDP vehicle-identification flow, from independently tested
@@ -199,5 +203,6 @@ boundary; M6.2 implemented `0x22` and `0x2E` with a dedicated guide and demo.
 M7.1 defined the symbolic DTC boundary; M7.2 implemented status-filtered
 `0x19` reads and `0x14` clear-all with configuration, tests, and a dedicated
 demo. M8.1 defined the simulator-only SecurityAccess boundary; M8.2 implements
-`0x27` and uses its per-connection authorization to guard DID writes. Additional
-UDS services remain upcoming.
+`0x27` and uses its per-connection authorization to guard DID writes. M9 adds a
+loopback-only Python tester and launches it against an isolated server process
+in CTest. M10 remains upcoming.

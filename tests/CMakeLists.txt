@@ -4,6 +4,7 @@ endif()
 
 include(GoogleTest)
 find_package(Threads REQUIRED)
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
 add_executable(unit_tests
   unit/test_doip_header.cpp
@@ -28,3 +29,12 @@ add_executable(integration_tests
 )
 target_link_libraries(integration_tests PRIVATE doip_uds_core project_warnings GTest::gtest GTest::gtest_main Threads::Threads)
 gtest_discover_tests(integration_tests)
+
+add_test(
+  NAME PythonDoipTesterIntegration
+  COMMAND ${Python3_EXECUTABLE}
+    ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_doip_tester.py
+    --server $<TARGET_FILE:doip_server>
+    --config ${PROJECT_SOURCE_DIR}/config/ecu_config.json
+)
+set_tests_properties(PythonDoipTesterIntegration PROPERTIES TIMEOUT 45)

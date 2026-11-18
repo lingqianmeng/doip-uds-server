@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-option(DOIP_BUILD_TESTS "Build unit tests" ON)
+option(DOIP_BUILD_TESTS "Build unit and integration tests" ON)
 option(DOIP_WARNINGS_AS_ERRORS "Treat warnings as errors" ON)
 
 include(FetchContent)
