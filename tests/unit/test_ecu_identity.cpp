@@ -46,9 +46,11 @@ std::string make_config(const std::string& vin = "WVWZZZ00000000001",
                         const std::string& logical_address = "0x1001",
                         const std::string& eid = "00:00:00:00:00:01",
                         const std::string& gid = "00:00:00:00:00:02",
-                        const std::string& dids = "[]") {
+                        const std::string& dids = "[]",
+                        const std::string& dtcs = "[]") {
     return "{\"logical_address\":\"" + logical_address + "\",\"vin\":\"" + vin +
-           "\",\"eid\":\"" + eid + "\",\"gid\":\"" + gid + "\",\"dids\":" + dids + "}";
+           "\",\"eid\":\"" + eid + "\",\"gid\":\"" + gid + "\",\"dids\":" + dids +
+           ",\"dtcs\":" + dtcs + "}";
 }
 
 std::string load_error(const std::string& contents) {
@@ -81,6 +83,7 @@ TEST(EcuIdentity, LoadsAndDecodesValidConfiguration) {
     EXPECT_EQ(identity.eid, expected_eid);
     EXPECT_EQ(identity.gid, expected_gid);
     EXPECT_TRUE(identity.dids.empty());
+    EXPECT_TRUE(identity.dtcs.empty());
 }
 
 TEST(EcuIdentity, LoadsConfiguredDataIdentifiers) {
@@ -158,6 +161,53 @@ TEST(EcuIdentity, RejectsInvalidDidConfiguration) {
                                      "[{\"identifier\":\"0xF1A0\",\"initial_value\":[0],"
                                      "\"readable\":false,\"writable\":false}]"))
                   .find("must be readable"),
+              std::string::npos);
+}
+
+TEST(EcuIdentity, LoadsSymbolicDtcConfiguration) {
+    const TemporaryConfig config(make_config(
+        "WVWZZZ00000000001",
+        "0x1001",
+        "00:00:00:00:00:01",
+        "00:00:00:00:00:02",
+        "[]",
+        "[{\"symbolic_name\":\"DTC_RAM_TEST\",\"initial_status\":9},"
+        "{\"symbolic_name\":\"DTC_SBC_CHECK\",\"initial_status\":8}]"));
+
+    const auto identity = doip_uds::load_ecu_identity(config.path());
+
+    ASSERT_EQ(identity.dtcs.size(), 2U);
+    EXPECT_EQ(identity.dtcs[0].symbolic_name, "DTC_RAM_TEST");
+    EXPECT_EQ(identity.dtcs[0].pseudo_dfcc, doip_uds::DeploymentDtc::RAM_TEST);
+    EXPECT_EQ(identity.dtcs[0].initial_status, 0x09);
+    EXPECT_EQ(identity.dtcs[1].symbolic_name, "DTC_SBC_CHECK");
+    EXPECT_EQ(identity.dtcs[1].pseudo_dfcc, doip_uds::DeploymentDtc::SBC_CHECK);
+    EXPECT_EQ(identity.dtcs[1].initial_status, 0x08);
+}
+
+TEST(EcuIdentity, RejectsInvalidDtcConfiguration) {
+    const auto load_dtcs_error = [](const std::string& dtcs) {
+        return load_error(make_config("WVWZZZ00000000001",
+                                      "0x1001",
+                                      "00:00:00:00:00:01",
+                                      "00:00:00:00:00:02",
+                                      "[]",
+                                      dtcs));
+    };
+    EXPECT_NE(load_dtcs_error("null").find("'dtcs' must be an array"), std::string::npos);
+    EXPECT_NE(load_dtcs_error("[{\"symbolic_name\":\"DTC_UNKNOWN\",\"initial_status\":9}]")
+                  .find("unsupported symbolic_name"),
+              std::string::npos);
+    EXPECT_NE(load_dtcs_error("[{\"symbolic_name\":\"DTC_RAM_TEST\",\"initial_status\":256}]")
+                  .find("integer byte"),
+              std::string::npos);
+    EXPECT_NE(load_dtcs_error("[{\"symbolic_name\":\"DTC_RAM_TEST\",\"initial_status\":-1}]")
+                  .find("integer byte"),
+              std::string::npos);
+    EXPECT_NE(load_dtcs_error(
+                  "[{\"symbolic_name\":\"DTC_RAM_TEST\",\"initial_status\":9},"
+                  "{\"symbolic_name\":\"DTC_RAM_TEST\",\"initial_status\":8}]")
+                  .find("duplicate symbolic_name"),
               std::string::npos);
 }
 

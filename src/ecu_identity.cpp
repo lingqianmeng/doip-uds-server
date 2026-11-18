@@ -135,6 +135,53 @@ std::vector<EcuDidConfiguration> parse_dids(const Json& config) {
     return dids;
 }
 
+std::uint8_t parse_dtc_status(const Json& field) {
+    if (field.is_number_unsigned()) {
+        const auto status = field.get<std::uint64_t>();
+        if (status <= 0xFFU) {
+            return static_cast<std::uint8_t>(status);
+        }
+    } else if (field.is_number_integer()) {
+        const auto status = field.get<std::int64_t>();
+        if (status >= 0 && status <= 0xFF) {
+            return static_cast<std::uint8_t>(status);
+        }
+    }
+    throw std::runtime_error(
+        "DTC configuration field 'initial_status' must be an integer byte between 0 and 255");
+}
+
+std::vector<EcuDtcConfiguration> parse_dtcs(const Json& config) {
+    const auto field = config.find("dtcs");
+    if (field == config.end()) {
+        return {};
+    }
+    if (!field->is_array()) {
+        throw std::runtime_error("Configuration field 'dtcs' must be an array");
+    }
+
+    std::vector<EcuDtcConfiguration> dtcs;
+    std::set<std::string> symbolic_names;
+    dtcs.reserve(field->size());
+    for (const auto& dtc : *field) {
+        if (!dtc.is_object()) {
+            throw std::runtime_error("Each entry in configuration field 'dtcs' must be an object");
+        }
+        auto symbolic_name = required_string(dtc, "symbolic_name");
+        const auto code = deployment_dtc_code(symbolic_name);
+        if (!code) {
+            throw std::runtime_error("Configuration field 'dtcs' contains an unsupported symbolic_name '" +
+                                     symbolic_name + "'");
+        }
+        if (!symbolic_names.insert(symbolic_name).second) {
+            throw std::runtime_error("Configuration field 'dtcs' contains a duplicate symbolic_name");
+        }
+        const auto initial_status = parse_dtc_status(required_field(dtc, "initial_status"));
+        dtcs.push_back({std::move(symbolic_name), *code, initial_status});
+    }
+    return dtcs;
+}
+
 bool is_valid_vin_character(unsigned char character) {
     return (character >= '0' && character <= '9') ||
            (character >= 'A' && character <= 'H') ||
@@ -258,7 +305,8 @@ EcuIdentity load_ecu_identity(const std::filesystem::path& config_path) {
     const auto eid = parse_identifier(required_string(config, "eid"), "eid");
     const auto gid = parse_identifier(required_string(config, "gid"), "gid");
     const auto dids = parse_dids(config);
-    return EcuIdentity{vin, logical_address, eid, gid, dids};
+    const auto dtcs = parse_dtcs(config);
+    return EcuIdentity{vin, logical_address, eid, gid, dids, dtcs};
 }
 
 }  // namespace doip_uds

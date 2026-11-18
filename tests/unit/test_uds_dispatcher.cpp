@@ -1,6 +1,7 @@
 #include "doip_uds/uds_dispatcher.hpp"
 
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -18,10 +19,27 @@ doip_uds::UdsDataIdentifierStore make_test_data_identifiers() {
     };
 }
 
+doip_uds::UdsDtcStore make_test_dtcs() {
+    doip_uds::UdsDtcStore dtcs;
+    for (const auto& definition : doip_uds::kDeploymentDtcDefinitions) {
+        dtcs.push_back(
+            {std::string(definition.symbolic_name), definition.pseudo_dfcc, 0x09});
+    }
+    return dtcs;
+}
+
 doip_uds::UdsDispatchResult dispatch(const std::vector<std::uint8_t>& request,
                                     doip_uds::UdsConnectionState& state) {
     auto data_identifiers = make_test_data_identifiers();
-    return doip_uds::dispatch_uds_request(request, state, data_identifiers);
+    auto dtcs = make_test_dtcs();
+    return doip_uds::dispatch_uds_request(request, state, data_identifiers, dtcs);
+}
+
+doip_uds::UdsDispatchResult dispatch(const std::vector<std::uint8_t>& request,
+                                    doip_uds::UdsConnectionState& state,
+                                    doip_uds::UdsDataIdentifierStore& data_identifiers,
+                                    doip_uds::UdsDtcStore& dtcs) {
+    return doip_uds::dispatch_uds_request(request, state, data_identifiers, dtcs);
 }
 
 TEST(UdsDispatcher, HandlesDefaultAndExtendedSessionControl) {
@@ -128,9 +146,10 @@ TEST(UdsDispatcher, RejectsEmptyRequestWithoutServiceIdentifier) {
 TEST(UdsDispatcher, ReadsConfiguredVinAndMultipleDidsInRequestOrder) {
     doip_uds::UdsConnectionState state;
     auto data_identifiers = make_test_data_identifiers();
+    auto dtcs = make_test_dtcs();
 
     const auto result =
-        doip_uds::dispatch_uds_request({0x22, 0xF1, 0x90, 0xF1, 0xA0}, state, data_identifiers);
+        dispatch({0x22, 0xF1, 0x90, 0xF1, 0xA0}, state, data_identifiers, dtcs);
 
     ASSERT_TRUE(result.response.has_value());
     EXPECT_EQ(*result.response,
@@ -142,15 +161,16 @@ TEST(UdsDispatcher, ReadsConfiguredVinAndMultipleDidsInRequestOrder) {
 TEST(UdsDispatcher, RejectsUnknownOrUnreadableDidWithoutPartialResponse) {
     doip_uds::UdsConnectionState state;
     auto data_identifiers = make_test_data_identifiers();
+    auto dtcs = make_test_dtcs();
     data_identifiers.at(0xF1A0).readable = false;
 
     const auto unknown =
-        doip_uds::dispatch_uds_request({0x22, 0xF1, 0x90, 0xF1, 0xA1}, state, data_identifiers);
+        dispatch({0x22, 0xF1, 0x90, 0xF1, 0xA1}, state, data_identifiers, dtcs);
     ASSERT_TRUE(unknown.response.has_value());
     EXPECT_EQ(*unknown.response, (std::vector<std::uint8_t>{0x7F, 0x22, 0x31}));
 
     const auto unreadable =
-        doip_uds::dispatch_uds_request({0x22, 0xF1, 0xA0}, state, data_identifiers);
+        dispatch({0x22, 0xF1, 0xA0}, state, data_identifiers, dtcs);
     ASSERT_TRUE(unreadable.response.has_value());
     EXPECT_EQ(*unreadable.response, (std::vector<std::uint8_t>{0x7F, 0x22, 0x31}));
 }
@@ -158,11 +178,10 @@ TEST(UdsDispatcher, RejectsUnknownOrUnreadableDidWithoutPartialResponse) {
 TEST(UdsDispatcher, WritesDidOnlyInExtendedSessionAndChecksDataLength) {
     doip_uds::UdsConnectionState state;
     auto data_identifiers = make_test_data_identifiers();
+    auto dtcs = make_test_dtcs();
 
     const auto default_session =
-        doip_uds::dispatch_uds_request({0x2E, 0xF1, 0xA0, 0x11, 0x22, 0x33, 0x44},
-                                       state,
-                                       data_identifiers);
+        dispatch({0x2E, 0xF1, 0xA0, 0x11, 0x22, 0x33, 0x44}, state, data_identifiers, dtcs);
     ASSERT_TRUE(default_session.response.has_value());
     EXPECT_EQ(*default_session.response, (std::vector<std::uint8_t>{0x7F, 0x2E, 0x7E}));
     EXPECT_EQ(data_identifiers.at(0xF1A0).value,
@@ -170,21 +189,17 @@ TEST(UdsDispatcher, WritesDidOnlyInExtendedSessionAndChecksDataLength) {
 
     state.session = doip_uds::UdsDiagnosticSession::extended_session;
     const auto invalid_length =
-        doip_uds::dispatch_uds_request({0x2E, 0xF1, 0xA0, 0x11, 0x22},
-                                       state,
-                                       data_identifiers);
+        dispatch({0x2E, 0xF1, 0xA0, 0x11, 0x22}, state, data_identifiers, dtcs);
     ASSERT_TRUE(invalid_length.response.has_value());
     EXPECT_EQ(*invalid_length.response, (std::vector<std::uint8_t>{0x7F, 0x2E, 0x13}));
 
     const auto read_only =
-        doip_uds::dispatch_uds_request({0x2E, 0xF1, 0x90, 0x00}, state, data_identifiers);
+        dispatch({0x2E, 0xF1, 0x90, 0x00}, state, data_identifiers, dtcs);
     ASSERT_TRUE(read_only.response.has_value());
     EXPECT_EQ(*read_only.response, (std::vector<std::uint8_t>{0x7F, 0x2E, 0x31}));
 
     const auto written =
-        doip_uds::dispatch_uds_request({0x2E, 0xF1, 0xA0, 0x11, 0x22, 0x33, 0x44},
-                                       state,
-                                       data_identifiers);
+        dispatch({0x2E, 0xF1, 0xA0, 0x11, 0x22, 0x33, 0x44}, state, data_identifiers, dtcs);
     ASSERT_TRUE(written.response.has_value());
     EXPECT_EQ(*written.response, (std::vector<std::uint8_t>{0x6E, 0xF1, 0xA0}));
     EXPECT_EQ(data_identifiers.at(0xF1A0).value,
@@ -193,6 +208,7 @@ TEST(UdsDispatcher, WritesDidOnlyInExtendedSessionAndChecksDataLength) {
 
 TEST(UdsDispatcher, SharesDidValuesAcrossConnectionSessions) {
     auto data_identifiers = make_test_data_identifiers();
+    auto dtcs = make_test_dtcs();
     doip_uds::UdsConnectionState writer;
     writer.session = doip_uds::UdsDiagnosticSession::extended_session;
     doip_uds::UdsConnectionState reader;
@@ -200,11 +216,12 @@ TEST(UdsDispatcher, SharesDidValuesAcrossConnectionSessions) {
     const auto written =
         doip_uds::dispatch_uds_request({0x2E, 0xF1, 0xA0, 0xA1, 0xA2, 0xA3, 0xA4},
                                        writer,
-                                       data_identifiers);
+                                       data_identifiers,
+                                       dtcs);
     ASSERT_TRUE(written.response.has_value());
 
     const auto read =
-        doip_uds::dispatch_uds_request({0x22, 0xF1, 0xA0}, reader, data_identifiers);
+        doip_uds::dispatch_uds_request({0x22, 0xF1, 0xA0}, reader, data_identifiers, dtcs);
     ASSERT_TRUE(read.response.has_value());
     EXPECT_EQ(*read.response,
               (std::vector<std::uint8_t>{0x62, 0xF1, 0xA0, 0xA1, 0xA2, 0xA3, 0xA4}));
@@ -220,6 +237,134 @@ TEST(UdsDispatcher, RejectsMalformedDidRequests) {
         EXPECT_EQ(*result.response,
                   (std::vector<std::uint8_t>{0x7F, request.front(), 0x13}));
     }
+}
+
+TEST(UdsDispatcher, ReportsDtcCountAndRecordsByStatusMask) {
+    doip_uds::UdsConnectionState state;
+    auto data_identifiers = make_test_data_identifiers();
+    auto dtcs = make_test_dtcs();
+
+    const auto count =
+        doip_uds::dispatch_uds_request({0x19, 0x01, 0x09}, state, data_identifiers, dtcs);
+    ASSERT_TRUE(count.response.has_value());
+    EXPECT_EQ(*count.response,
+              (std::vector<std::uint8_t>{0x59, 0x01, 0xFF, 0x01, 0x00, 0x0A}));
+
+    const auto records =
+        doip_uds::dispatch_uds_request({0x19, 0x02, 0x08}, state, data_identifiers, dtcs);
+    ASSERT_TRUE(records.response.has_value());
+    EXPECT_EQ(*records.response,
+              (std::vector<std::uint8_t>{
+                  0x59, 0x02, 0xFF,
+                  0xF0, 0x00, 0x01, 0x09,
+                  0xF0, 0x00, 0x02, 0x09,
+                  0xF0, 0x00, 0x03, 0x09,
+                  0xF0, 0x00, 0x04, 0x09,
+                  0xF0, 0x00, 0x05, 0x09,
+                  0xF0, 0x00, 0x06, 0x09,
+                  0xF0, 0x00, 0x07, 0x09,
+                  0xF0, 0x00, 0x08, 0x09,
+                  0xF0, 0x00, 0x09, 0x09,
+                  0xF0, 0x00, 0x0A, 0x09}));
+}
+
+TEST(UdsDispatcher, FiltersDtcResultsByAnyRequestedStatusBit) {
+    doip_uds::UdsConnectionState state;
+    auto data_identifiers = make_test_data_identifiers();
+    auto dtcs = make_test_dtcs();
+    dtcs[0].status = 0x01;
+    dtcs[1].status = 0x08;
+    dtcs[2].status = 0x00;
+
+    const auto count =
+        doip_uds::dispatch_uds_request({0x19, 0x01, 0x08}, state, data_identifiers, dtcs);
+    ASSERT_TRUE(count.response.has_value());
+    EXPECT_EQ(*count.response,
+              (std::vector<std::uint8_t>{0x59, 0x01, 0xFF, 0x01, 0x00, 0x08}));
+
+    const auto records =
+        doip_uds::dispatch_uds_request({0x19, 0x02, 0x08}, state, data_identifiers, dtcs);
+    ASSERT_TRUE(records.response.has_value());
+    EXPECT_EQ(*records.response, (std::vector<std::uint8_t>{0x59, 0x02, 0xFF, 0xF0, 0x00,
+                                                            0x02, 0x08, 0xF0, 0x00, 0x04,
+                                                            0x09, 0xF0, 0x00, 0x05, 0x09,
+                                                            0xF0, 0x00, 0x06, 0x09, 0xF0,
+                                                            0x00, 0x07, 0x09, 0xF0, 0x00,
+                                                            0x08, 0x09, 0xF0, 0x00, 0x09,
+                                                            0x09, 0xF0, 0x00, 0x0A, 0x09}));
+}
+
+TEST(UdsDispatcher, SuppressesPositiveReadDtcResponse) {
+    doip_uds::UdsConnectionState state;
+    auto data_identifiers = make_test_data_identifiers();
+    auto dtcs = make_test_dtcs();
+
+    const auto result =
+        doip_uds::dispatch_uds_request({0x19, 0x81, 0xFF}, state, data_identifiers, dtcs);
+
+    EXPECT_FALSE(result.response.has_value());
+}
+
+TEST(UdsDispatcher, ClearsAllDtcsOnlyInExtendedSession) {
+    doip_uds::UdsConnectionState state;
+    auto data_identifiers = make_test_data_identifiers();
+    auto dtcs = make_test_dtcs();
+
+    const auto default_session =
+        doip_uds::dispatch_uds_request({0x14, 0xFF, 0xFF, 0xFF},
+                                       state,
+                                       data_identifiers,
+                                       dtcs);
+    ASSERT_TRUE(default_session.response.has_value());
+    EXPECT_EQ(*default_session.response, (std::vector<std::uint8_t>{0x7F, 0x14, 0x7E}));
+    EXPECT_EQ(dtcs.size(), 10U);
+
+    state.session = doip_uds::UdsDiagnosticSession::extended_session;
+    const auto unsupported_group =
+        doip_uds::dispatch_uds_request({0x14, 0x00, 0x00, 0x01},
+                                       state,
+                                       data_identifiers,
+                                       dtcs);
+    ASSERT_TRUE(unsupported_group.response.has_value());
+    EXPECT_EQ(*unsupported_group.response, (std::vector<std::uint8_t>{0x7F, 0x14, 0x31}));
+    EXPECT_EQ(dtcs.size(), 10U);
+
+    const auto cleared =
+        doip_uds::dispatch_uds_request({0x14, 0xFF, 0xFF, 0xFF},
+                                       state,
+                                       data_identifiers,
+                                       dtcs);
+    ASSERT_TRUE(cleared.response.has_value());
+    EXPECT_EQ(*cleared.response, (std::vector<std::uint8_t>{0x54}));
+    EXPECT_TRUE(dtcs.empty());
+
+    const auto empty_count =
+        doip_uds::dispatch_uds_request({0x19, 0x01, 0xFF}, state, data_identifiers, dtcs);
+    ASSERT_TRUE(empty_count.response.has_value());
+    EXPECT_EQ(*empty_count.response,
+              (std::vector<std::uint8_t>{0x59, 0x01, 0xFF, 0x01, 0x00, 0x00}));
+}
+
+TEST(UdsDispatcher, ReturnsNegativeResponsesForMalformedDtcRequests) {
+    doip_uds::UdsConnectionState state;
+    auto data_identifiers = make_test_data_identifiers();
+    auto dtcs = make_test_dtcs();
+    const std::vector<std::vector<std::uint8_t>> malformed_requests{
+        {0x19}, {0x19, 0x01}, {0x19, 0x01, 0xFF, 0x00}, {0x14},
+        {0x14, 0xFF, 0xFF}, {0x14, 0xFF, 0xFF, 0xFF, 0x00}};
+    for (const auto& request : malformed_requests) {
+        const auto result =
+            doip_uds::dispatch_uds_request(request, state, data_identifiers, dtcs);
+        ASSERT_TRUE(result.response.has_value());
+        EXPECT_EQ(*result.response,
+                  (std::vector<std::uint8_t>{0x7F, request.front(), 0x13}));
+    }
+
+    const auto unsupported_subfunction =
+        doip_uds::dispatch_uds_request({0x19, 0x03, 0xFF}, state, data_identifiers, dtcs);
+    ASSERT_TRUE(unsupported_subfunction.response.has_value());
+    EXPECT_EQ(*unsupported_subfunction.response,
+              (std::vector<std::uint8_t>{0x7F, 0x19, 0x12}));
 }
 
 }  // namespace

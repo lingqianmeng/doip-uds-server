@@ -40,6 +40,7 @@ void process_tcp_message(TcpClientSession& client,
                          const std::vector<TcpClientSession>& clients,
                          const doip_uds::EcuIdentity& identity,
                          doip_uds::UdsDataIdentifierStore& data_identifiers,
+                         doip_uds::UdsDtcStore& dtcs,
                          const std::vector<std::uint8_t>& message) {
     const auto header = doip_uds::decode_doip_header(message.data(), message.size());
     if (!header) {
@@ -107,8 +108,25 @@ void process_tcp_message(TcpClientSession& client,
                   << " ack_code=0x" << std::hex << std::uppercase << std::setw(2)
                   << static_cast<unsigned int>(result.response_code) << std::dec << '\n';
 
+        std::vector<std::string> cleared_dtc_names;
+        const auto& uds_request = result.accepted_message->user_data;
+        if (!uds_request.empty() &&
+            uds_request.front() == doip_uds::kUdsServiceClearDiagnosticInformation) {
+            cleared_dtc_names.reserve(dtcs.size());
+            for (const auto& dtc : dtcs) {
+                cleared_dtc_names.push_back(dtc.symbolic_name);
+            }
+        }
         const auto uds_result = doip_uds::dispatch_uds_request(
-            result.accepted_message->user_data, client.uds_state, data_identifiers);
+            uds_request, client.uds_state, data_identifiers, dtcs);
+        if (!cleared_dtc_names.empty() && uds_result.response &&
+            *uds_result.response == std::vector<std::uint8_t>{0x54}) {
+            std::cout << "[UDS] Cleared synthetic DTCs:";
+            for (const auto& name : cleared_dtc_names) {
+                std::cout << ' ' << name;
+            }
+            std::cout << '\n';
+        }
         if (uds_result.reset_requested == doip_uds::UdsEcuResetType::hard_reset) {
             std::cout << "[UDS] Simulated ECU hard reset; session returned to default\n";
         }
@@ -138,6 +156,7 @@ void process_tcp_message(TcpClientSession& client,
 void accept_tcp_connections(doip_uds::TcpListener& listener,
                             const doip_uds::EcuIdentity& identity,
                             doip_uds::UdsDataIdentifierStore& data_identifiers,
+                            doip_uds::UdsDtcStore& dtcs,
                             const std::atomic<bool>& tcp_failed) {
     std::vector<TcpClientSession> connections;
     constexpr auto kAcceptTimeout = std::chrono::milliseconds(100);
@@ -172,7 +191,7 @@ void accept_tcp_connections(doip_uds::TcpListener& listener,
                         break;
                     }
                     process_tcp_message(
-                        client, connections, identity, data_identifiers, *message);
+                        client, connections, identity, data_identifiers, dtcs, *message);
                 }
 
                 if (!client.connection.is_connected()) {
@@ -207,12 +226,21 @@ int main(int argc, char* argv[]) {
     const std::string config_path = argc == 2 ? argv[1] : "config/ecu_config.json";
     doip_uds::EcuIdentity identity;
     doip_uds::UdsDataIdentifierStore data_identifiers;
+    doip_uds::UdsDtcStore dtcs;
     try {
         identity = doip_uds::load_ecu_identity(config_path);
         data_identifiers = doip_uds::make_uds_data_identifier_store(identity);
+        dtcs = doip_uds::make_uds_dtc_store(identity);
         std::cout << "doip_server " << doip_uds::version()
                   << " loaded ECU identity at logical address 0x" << std::hex << std::uppercase
                   << std::setw(4) << std::setfill('0') << identity.logical_address << '\n';
+        if (!identity.dtcs.empty()) {
+            std::cout << "[UDS] Configured synthetic DTCs:";
+            for (const auto& dtc : identity.dtcs) {
+                std::cout << ' ' << dtc.symbolic_name;
+            }
+            std::cout << '\n';
+        }
     } catch (const std::exception& error) {
         std::cerr << "Failed to load ECU identity: " << error.what() << '\n';
         return 1;
@@ -232,7 +260,7 @@ int main(int argc, char* argv[]) {
         std::atomic<bool> tcp_failed{false};
         std::thread tcp_acceptor([&] {
             try {
-                accept_tcp_connections(tcp_listener, identity, data_identifiers, tcp_failed);
+                accept_tcp_connections(tcp_listener, identity, data_identifiers, dtcs, tcp_failed);
             } catch (...) {
                 tcp_error = std::current_exception();
                 tcp_failed.store(true);

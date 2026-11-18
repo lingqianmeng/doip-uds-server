@@ -1,6 +1,7 @@
 #include <chrono>
 #include <cstdint>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -172,6 +173,7 @@ std::vector<std::uint8_t> exchange_uds_request(
     doip_uds::RoutingActivationSession& activation_session,
     doip_uds::UdsConnectionState& uds_state,
     doip_uds::UdsDataIdentifierStore& data_identifiers,
+    doip_uds::UdsDtcStore& dtcs,
     const std::vector<std::uint8_t>& uds_request) {
     constexpr std::uint16_t kTesterAddress = 0x0E00;
     constexpr std::uint16_t kEntityAddress = 0x1001;
@@ -208,9 +210,8 @@ std::vector<std::uint8_t> exchange_uds_request(
             std::vector<std::uint8_t>{0x10, 0x01, 0x0E, 0x00, 0x00}) {
         throw std::runtime_error("Client received an invalid Diagnostic Message ACK");
     }
-
     const auto uds_result = doip_uds::dispatch_uds_request(
-        diagnostic_result.accepted_message->user_data, uds_state, data_identifiers);
+        diagnostic_result.accepted_message->user_data, uds_state, data_identifiers, dtcs);
     if (!uds_result.response) {
         throw std::runtime_error("Expected a UDS response for the integration request");
     }
@@ -319,8 +320,13 @@ TEST(DiagnosticFlowTcp, ActivatesAcknowledgesAndReturnsUdsResponseOnSameConnecti
           false}},
         {0xF1A0, {{0x00, 0x00, 0x00, 0x00}, true, true}},
     };
+    doip_uds::UdsDtcStore dtcs;
+    for (const auto& definition : doip_uds::kDeploymentDtcDefinitions) {
+        dtcs.push_back(
+            {std::string(definition.symbolic_name), definition.pseudo_dfcc, 0x09});
+    }
     const auto uds_result = doip_uds::dispatch_uds_request(
-        diagnostic_result.accepted_message->user_data, uds_state, data_identifiers);
+        diagnostic_result.accepted_message->user_data, uds_state, data_identifiers, dtcs);
     ASSERT_TRUE(uds_result.response.has_value());
     server_connection->send_message(
         doip_uds::kDoipPayloadTypeDiagnosticMessage,
@@ -342,6 +348,7 @@ TEST(DiagnosticFlowTcp, ActivatesAcknowledgesAndReturnsUdsResponseOnSameConnecti
                                    activation_session,
                                    uds_state,
                                    data_identifiers,
+                                   dtcs,
                                    {0x22, 0xF1, 0x90, 0xF1, 0xA0}),
               (std::vector<std::uint8_t>{0x62, 0xF1, 0x90, 'W', 'V', 'W', 'Z', 'Z', 'Z',
                                          '0',  '0',  '0',  '0', '0', '0', '0', '0', '0', '0',
@@ -351,6 +358,7 @@ TEST(DiagnosticFlowTcp, ActivatesAcknowledgesAndReturnsUdsResponseOnSameConnecti
                                    activation_session,
                                    uds_state,
                                    data_identifiers,
+                                   dtcs,
                                    {0x2E, 0xF1, 0xA0, 0x11, 0x22, 0x33, 0x44}),
               (std::vector<std::uint8_t>{0x7F, 0x2E, 0x7E}));
     EXPECT_EQ(exchange_uds_request(client,
@@ -358,6 +366,7 @@ TEST(DiagnosticFlowTcp, ActivatesAcknowledgesAndReturnsUdsResponseOnSameConnecti
                                    activation_session,
                                    uds_state,
                                    data_identifiers,
+                                   dtcs,
                                    {0x10, 0x03}),
               (std::vector<std::uint8_t>{0x50, 0x03, 0x00, 0x32, 0x01, 0xF4}));
     EXPECT_EQ(exchange_uds_request(client,
@@ -365,6 +374,7 @@ TEST(DiagnosticFlowTcp, ActivatesAcknowledgesAndReturnsUdsResponseOnSameConnecti
                                    activation_session,
                                    uds_state,
                                    data_identifiers,
+                                   dtcs,
                                    {0x2E, 0xF1, 0xA0, 0x11, 0x22, 0x33, 0x44}),
               (std::vector<std::uint8_t>{0x6E, 0xF1, 0xA0}));
     EXPECT_EQ(exchange_uds_request(client,
@@ -372,6 +382,31 @@ TEST(DiagnosticFlowTcp, ActivatesAcknowledgesAndReturnsUdsResponseOnSameConnecti
                                    activation_session,
                                    uds_state,
                                    data_identifiers,
+                                   dtcs,
                                    {0x22, 0xF1, 0xA0}),
               (std::vector<std::uint8_t>{0x62, 0xF1, 0xA0, 0x11, 0x22, 0x33, 0x44}));
+    EXPECT_EQ(exchange_uds_request(client,
+                                   *server_connection,
+                                   activation_session,
+                                   uds_state,
+                                   data_identifiers,
+                                   dtcs,
+                                   {0x19, 0x01, 0x09}),
+              (std::vector<std::uint8_t>{0x59, 0x01, 0xFF, 0x01, 0x00, 0x0A}));
+    EXPECT_EQ(exchange_uds_request(client,
+                                   *server_connection,
+                                   activation_session,
+                                   uds_state,
+                                   data_identifiers,
+                                   dtcs,
+                                   {0x14, 0xFF, 0xFF, 0xFF}),
+              (std::vector<std::uint8_t>{0x54}));
+    EXPECT_EQ(exchange_uds_request(client,
+                                   *server_connection,
+                                   activation_session,
+                                   uds_state,
+                                   data_identifiers,
+                                   dtcs,
+                                   {0x19, 0x01, 0xFF}),
+              (std::vector<std::uint8_t>{0x59, 0x01, 0xFF, 0x01, 0x00, 0x00}));
 }

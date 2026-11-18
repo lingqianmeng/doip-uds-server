@@ -11,5 +11,16 @@
       "writable": true
     }
   ],
-  "dtcs": []
+  "dtcs": [
+    { "symbolic_name": "DTC_RAM_TEST", "initial_status": 9 },
+    { "symbolic_name": "DTC_RAM_ECC", "initial_status": 9 },
+    { "symbolic_name": "DTC_CONTROL_MODULE", "initial_status": 9 },
+    { "symbolic_name": "DTC_ROM_CHECK", "initial_status": 9 },
+    { "symbolic_name": "DTC_MEMORY_PROTECTION", "initial_status": 9 },
+    { "symbolic_name": "DTC_CONTROLLER_SUPERVISION", "initial_status": 9 },
+    { "symbolic_name": "DTC_NVM_OPERATION", "initial_status": 9 },
+    { "symbolic_name": "DTC_ADC_CHECK", "initial_status": 9 },
+    { "symbolic_name": "DTC_POWER_MONITORING", "initial_status": 9 },
+    { "symbolic_name": "DTC_SBC_CHECK", "initial_status": 9 }
+  ]
 }
