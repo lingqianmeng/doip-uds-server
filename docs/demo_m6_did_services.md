@@ -41,10 +41,12 @@ Check the current interface numbers with `dumpcap -D` and find the
 
 The client activates routing, reads the VIN and writable DID in default
 session, confirms that a default-session write is denied, enters extended
-session, writes `11 22 33 44` to DID `0xF1A0`, and reads the updated value back.
-It also verifies that the read-only VIN DID cannot be written. Leave the capture
-running briefly after the client exits to record the TCP teardown, then stop
-`dumpcap` and the server with **Ctrl+C**.
+session, and confirms that the DID write remains locked. It performs the
+simulator-only SecurityAccess (`0x27`) seed/key exchange, writes `11 22 33 44`
+to DID `0xF1A0`, and reads the updated value back. It also verifies that the
+read-only VIN DID cannot be written. Leave the capture running briefly after
+the client exits to record the TCP teardown, then stop `dumpcap` and the server
+with **Ctrl+C**.
 
 ## Expected UDS exchanges
 
@@ -57,12 +59,17 @@ response then arrives in a separate reverse-addressed Diagnostic Message
 | `22 F1 90 F1 A0` | `62 F1 90` + 17 ASCII VIN bytes + `F1 A0 00 00 00 00` |
 | `2E F1 A0 11 22 33 44` in default session | `7F 2E 7E` |
 | `10 03` | `50 03 00 32 01 F4` |
-| `2E F1 A0 11 22 33 44` in extended session | `6E F1 A0` |
+| `2E F1 A0 11 22 33 44` in extended session before unlock | `7F 2E 33` |
+| `27 01` | `67 01 12 34` |
+| `27 02 B7 F7` | `67 02` |
+| `2E F1 A0 11 22 33 44` after unlock | `6E F1 A0` |
 | `22 F1 A0 F1 90` | `62 F1 A0 11 22 33 44 F1 90` + 17 ASCII VIN bytes |
 | `2E F1 90 00` in extended session | `7F 2E 31` |
 
 Writes update process memory only. Restarting the server restores the initial
-configured DID value.
+configured DID value. The seed/key exchange is a deterministic simulator
+demonstration, not a production security mechanism; see the
+[M8 SecurityAccess guide](m8_security_access.md).
 
 Open the capture with:
 

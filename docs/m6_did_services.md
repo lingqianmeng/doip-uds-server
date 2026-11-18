@@ -35,7 +35,8 @@ Diagnostic Message ACK before any separate UDS response.
   configured value length. A successful write responds with `0x6E` and the
   written DID.
 - Reads are available in default and extended sessions. Writes require the
-  extended session. SecurityAccess (`0x27`) is outside M6.
+  extended session and, since M8, an unlocked simulator security level. See the
+  [M8 SecurityAccess guide](m8_security_access.md).
 - Malformed request lengths use NRC `0x13`; unsupported DIDs or access
   directions use NRC `0x31`; writes in the default session use NRC `0x7E`.
 - The existing DoIP ACK-before-UDS-response flow and positive-response
@@ -63,12 +64,12 @@ shared by TCP clients; session state remains per connection.
 | Service | Request | Positive response | Negative responses |
 |---|---|---|---|
 | ReadDataByIdentifier (`0x22`) | `22` followed by one or more two-byte DIDs | `62`, then each DID and its data in request order | `0x13` for empty/incomplete DID lists; `0x31` for an unknown or unreadable DID. A request with any unavailable DID gets no partial positive response. |
-| WriteDataByIdentifier (`0x2E`) | `2E`, one two-byte DID, then exactly its configured number of data bytes | `6E` followed by the written DID | `0x13` for missing or incorrect-length data; `0x31` for an unknown or non-writable DID; `0x7E` if the request is made outside extended session. |
+| WriteDataByIdentifier (`0x2E`) | `2E`, one two-byte DID, then exactly its configured number of data bytes | `6E` followed by the written DID | `0x13` for missing or incorrect-length data; `0x31` for an unknown or non-writable DID; `0x7E` outside extended session; `0x33` until SecurityAccess is unlocked. |
 
 Reads are available in default and extended sessions. Writes require extended
-session. A successful write updates the shared runtime value; it is not
-persistent and returns to the configured initial value when the server
-restarts. SecurityAccess (`0x27`) is out of scope.
+session and an unlocked simulator security level. A successful write updates
+the shared runtime value; it is not persistent and returns to the configured
+initial value when the server restarts.
 
 DoIP behavior is unchanged: the server sends the Diagnostic Message ACK first,
 then any UDS positive or negative response in a separate reverse-addressed
@@ -90,5 +91,5 @@ ctest --preset debug --output-on-failure -R "EcuIdentity|UdsDispatcher|Diagnosti
 ```
 
 See the [M6 DID services demo](demo_m6_did_services.md) for a live-server
-walkthrough of reads, a rejected default-session write, an extended-session
-write, and verification of the updated value.
+walkthrough of reads, rejected writes before extended session and SecurityAccess,
+the M8 seed/key exchange, and verification of the updated value.
