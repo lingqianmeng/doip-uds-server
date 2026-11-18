@@ -13,6 +13,8 @@ inline constexpr std::uint8_t kUdsServiceSessionControl = 0x10;
 inline constexpr std::uint8_t kUdsServiceEcuReset = 0x11;
 inline constexpr std::uint8_t kUdsServiceReadDataByIdentifier = 0x22;
 inline constexpr std::uint8_t kUdsServiceWriteDataByIdentifier = 0x2E;
+inline constexpr std::uint8_t kUdsServiceReadDtcInformation = 0x19;
+inline constexpr std::uint8_t kUdsServiceClearDiagnosticInformation = 0x14;
 inline constexpr std::uint8_t kUdsServiceTesterPresent = 0x3E;
 
 inline constexpr std::uint8_t kUdsNegativeResponseCodeServiceNotSupported = 0x11;
@@ -20,6 +22,9 @@ inline constexpr std::uint8_t kUdsNegativeResponseCodeSubfunctionNotSupported = 
 inline constexpr std::uint8_t kUdsNegativeResponseCodeIncorrectLength = 0x13;
 inline constexpr std::uint8_t kUdsNegativeResponseCodeRequestOutOfRange = 0x31;
 inline constexpr std::uint8_t kUdsNegativeResponseCodeServiceNotSupportedInActiveSession = 0x7E;
+inline constexpr std::uint8_t kUdsDtcStatusAvailabilityMask = 0xFF;
+inline constexpr std::uint8_t kUdsDtcFormatIdentifier = 0x01;
+inline constexpr std::uint32_t kUdsAllDtcGroup = 0xFFFFFFU;
 
 inline constexpr std::uint16_t kUdsP2ServerMaximumMilliseconds = 50;
 inline constexpr std::uint16_t kUdsP2StarServerMaximum10Milliseconds = 500;
@@ -54,9 +59,13 @@ struct UdsDispatchResult {
 /// Creates the process-wide DID store, including the configured VIN DID.
 UdsDataIdentifierStore make_uds_data_identifier_store(const EcuIdentity& identity);
 
+/// Creates the process-wide DTC store from the configured synthetic DTCs.
+UdsDtcStore make_uds_dtc_store(const EcuIdentity& identity);
+
 /// Dispatches one non-empty UDS request and updates the connection's UDS state.
 UdsDispatchResult dispatch_uds_request(const std::vector<std::uint8_t>& request,
                                       UdsConnectionState& state,
-                                      UdsDataIdentifierStore& data_identifiers);
+                                      UdsDataIdentifierStore& data_identifiers,
+                                      UdsDtcStore& dtcs);
 
 }  // namespace doip_uds

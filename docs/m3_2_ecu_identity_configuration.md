@@ -22,7 +22,10 @@ address, and fixed-size EID and GID byte arrays.
 M3.2 originally ignored additional fields such as `dids` and `dtcs` because
 they belonged to later diagnostic-service milestones. M6 now loads the `dids`
 array to initialize the simulated DataIdentifier services; see the
-[M6 DID services guide](m6_did_services.md) for its entry schema.
+[M6 DID services guide](m6_did_services.md) for its entry schema. M7 loads
+the `dtcs` array as symbolic simulator DTCs; see the
+[M7 DTC services guide](m7_dtc_services.md) for supported names, placeholder
+values, and status-byte format.
 
 - **VIN:** exactly 17 uppercase VIN characters (`0-9`, `A-H`, `J-N`, `P`,
   `R-Z`); the all-zero and all-`0xFF` invalidity values are not accepted.

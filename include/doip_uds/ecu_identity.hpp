@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <vector>
 
+#include "doip_uds/dtc.hpp"
 #include "doip_uds/vehicle_identification.hpp"
 
 namespace doip_uds {
@@ -24,6 +25,7 @@ struct EcuIdentity {
     std::array<std::uint8_t, kDoipEntityIdSize> eid{};
     std::array<std::uint8_t, kDoipEntityIdSize> gid{};
     std::vector<EcuDidConfiguration> dids;
+    std::vector<EcuDtcConfiguration> dtcs;
 };
 
 /// Loads and validates the required ECU identity fields from a JSON file.
