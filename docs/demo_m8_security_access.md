@@ -7,17 +7,31 @@ exchange and its authorization of the sample writable DID `0xF1A0`.
 > The fixed XOR seed/key transform in this demo is predictable, non-cryptographic
 > test logic. It is not suitable for a real ECU or production use.
 
-## Run the demo
+## Run the demo and capture it in Wireshark
 
-From the repository root, build and start the Debug server:
+From the repository root, build the Debug server:
 
 ```powershell
 cmake --preset debug
 cmake --build --preset debug
+```
+
+Use three PowerShell terminals. In **Terminal 1**, find the Npcap loopback
+interface and start capturing DoIP TCP traffic. Replace `9` with the interface
+number shown for `NPF_Loopback`:
+
+```powershell
+& "$(scoop prefix wireshark)\dumpcap.exe" -D
+& "$(scoop prefix wireshark)\dumpcap.exe" -i 9 -f "tcp port 13400" -w captures\doip_m8.pcapng
+```
+
+In **Terminal 2**, start the server:
+
+```powershell
 .\build\debug\doip_server.exe
 ```
 
-In another PowerShell terminal, run the TCP loopback client:
+In **Terminal 3**, run the loopback client:
 
 ```powershell
 .\tools\doip_m6_did_services_demo.ps1 -Destination 127.0.0.1
@@ -26,7 +40,18 @@ In another PowerShell terminal, run the TCP loopback client:
 The existing M6 client also exercises M8: it enters extended session, confirms
 the DID write is denied while locked, requests an AirbagDeployment seed, sends
 the demonstration key, writes the DID, and reads the new value back. Every
-diagnostic request receives a DoIP ACK before its separate UDS response.
+diagnostic request receives a DoIP ACK before its separate UDS response. After
+the client exits, stop `dumpcap` and the server with **Ctrl+C**.
+
+Open the capture in Wireshark:
+
+```powershell
+wireshark .\captures\doip_m8.pcapng
+```
+
+Use the display filter `tcp.port == 13400`. TCP packet boundaries are not DoIP
+frame boundaries; use **Follow → TCP Stream** to inspect the diagnostic ACKs
+and UDS responses.
 
 ## Expected SecurityAccess exchanges
 
