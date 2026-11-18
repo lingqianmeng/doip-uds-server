@@ -22,27 +22,13 @@ The M7 boundary and implementation are:
 - Keep DoIP framing, routing, ACK/NACK, and ACK-before-UDS-response ordering
   unchanged. DTC selection and service validation remain in the UDS layer.
 - Configure DTCs under the existing `dtcs` array using symbolic names and an
-  initial status byte. The ten available names map internally to synthetic,
-  simulator-only 24-bit values:
-
-  | Symbolic name | Synthetic value |
-  |---|---:|
-  | `DTC_RAM_TEST` | `0xF00001` |
-  | `DTC_RAM_ECC` | `0xF00002` |
-  | `DTC_CONTROL_MODULE` | `0xF00003` |
-  | `DTC_ROM_CHECK` | `0xF00004` |
-  | `DTC_MEMORY_PROTECTION` | `0xF00005` |
-  | `DTC_CONTROLLER_SUPERVISION` | `0xF00006` |
-  | `DTC_NVM_OPERATION` | `0xF00007` |
-  | `DTC_ADC_CHECK` | `0xF00008` |
-  | `DTC_POWER_MONITORING` | `0xF00009` |
-  | `DTC_SBC_CHECK` | `0xF0000A` |
-
-  These values are invented placeholders for this simulator, not production
-  DTCs or authoritative diagnostic identifiers. Configuration, logs, and tests
-  use symbolic names; the sample gives all ten an initial status of `0x09`.
-  Seed the process-wide runtime store from configuration; clear operations
-  modify only runtime state, which is restored from configuration on restart.
+  initial status byte. The server supports the ten names in the
+  [supported DTC catalog](m7_supported_dtcs.md). Their mapped 24-bit values are
+  synthetic simulator placeholders, not production identifiers. Configuration,
+  logs, and tests use symbolic names; the sample gives all ten an initial
+  status of `0x09`. Seed the process-wide runtime store from configuration;
+  clear operations modify only runtime state, which is restored from
+  configuration on restart.
 - Support `0x19` subfunctions `0x01` (report number of DTCs matching a status
   mask) and `0x02` (report matching DTC/status records). Use DTC format
   identifier `0x01`; match a DTC when its current status intersects the
@@ -60,7 +46,8 @@ The M7 boundary and implementation are:
 
 ## Configuration and examples
 
-Each config entry uses `symbolic_name` and a decimal `initial_status` byte, for
+Each config entry uses `symbolic_name` and a decimal `initial_status` byte; see
+the [catalog](m7_supported_dtcs.md) for supported names and descriptions. For
 example:
 
 ```json
