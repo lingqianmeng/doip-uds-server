@@ -1,13 +1,17 @@
 #include <algorithm>
 #include <atomic>
+#include <charconv>
 #include <chrono>
 #include <csignal>
 #include <cstddef>
+#include <cstdint>
 #include <exception>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -25,8 +29,72 @@ namespace {
 
 volatile std::sig_atomic_t stop_requested = 0;
 
+struct ServerOptions {
+    std::string config_path{"config/ecu_config.json"};
+    std::string bind_address{"0.0.0.0"};
+    std::uint16_t tcp_port{doip_uds::kDoipTcpPort};
+    std::uint16_t udp_port{doip_uds::kDoipUdpPort};
+    bool show_help{};
+    bool config_path_set{};
+};
+
 void handle_interrupt(int) {
     stop_requested = 1;
+}
+
+std::uint16_t parse_port(const std::string& value, std::string_view option_name) {
+    unsigned int parsed_port{};
+    const auto result =
+        std::from_chars(value.data(), value.data() + value.size(), parsed_port);
+    if (result.ec != std::errc{} || result.ptr != value.data() + value.size() ||
+        parsed_port > std::numeric_limits<std::uint16_t>::max()) {
+        throw std::invalid_argument(std::string(option_name) + " must be between 0 and 65535");
+    }
+    return static_cast<std::uint16_t>(parsed_port);
+}
+
+ServerOptions parse_server_options(int argc, char* argv[]) {
+    ServerOptions options;
+    for (int index = 1; index < argc; ++index) {
+        const std::string argument(argv[index]);
+        const auto next_value = [&]() -> std::string {
+            if (index + 1 >= argc) {
+                throw std::invalid_argument(argument + " requires a value");
+            }
+            return argv[++index];
+        };
+
+        if (argument == "--help" || argument == "-h") {
+            options.show_help = true;
+        } else if (argument == "--config") {
+            if (options.config_path_set) {
+                throw std::invalid_argument("configuration path was specified more than once");
+            }
+            options.config_path = next_value();
+            options.config_path_set = true;
+        } else if (argument == "--bind-address") {
+            options.bind_address = next_value();
+        } else if (argument == "--tcp-port") {
+            options.tcp_port = parse_port(next_value(), "--tcp-port");
+        } else if (argument == "--udp-port") {
+            options.udp_port = parse_port(next_value(), "--udp-port");
+        } else if (!argument.empty() && argument.front() != '-') {
+            if (options.config_path_set) {
+                throw std::invalid_argument("configuration path was specified more than once");
+            }
+            options.config_path = argument;
+            options.config_path_set = true;
+        } else {
+            throw std::invalid_argument("unknown option: " + argument);
+        }
+    }
+    return options;
+}
+
+void print_usage(std::ostream& output) {
+    output << "Usage: doip_server [config-path | --config PATH] [--bind-address ADDRESS] "
+              "[--tcp-port PORT] [--udp-port PORT]\n"
+              "Ports may be 0 to let the operating system choose an available port.\n";
 }
 
 struct TcpClientSession {
@@ -218,17 +286,24 @@ void accept_tcp_connections(doip_uds::TcpListener& listener,
 }  // namespace
 
 int main(int argc, char* argv[]) {
-    if (argc > 2) {
-        std::cerr << "Usage: doip_server [config-path]\n";
+    ServerOptions options;
+    try {
+        options = parse_server_options(argc, argv);
+    } catch (const std::exception& error) {
+        std::cerr << "Invalid command line: " << error.what() << '\n';
+        print_usage(std::cerr);
         return 1;
     }
+    if (options.show_help) {
+        print_usage(std::cout);
+        return 0;
+    }
 
-    const std::string config_path = argc == 2 ? argv[1] : "config/ecu_config.json";
     doip_uds::EcuIdentity identity;
     doip_uds::UdsDataIdentifierStore data_identifiers;
     doip_uds::UdsDtcStore dtcs;
     try {
-        identity = doip_uds::load_ecu_identity(config_path);
+        identity = doip_uds::load_ecu_identity(options.config_path);
         data_identifiers = doip_uds::make_uds_data_identifier_store(identity);
         dtcs = doip_uds::make_uds_dtc_store(identity);
         std::cout << "doip_server " << doip_uds::version()
@@ -247,13 +322,14 @@ int main(int argc, char* argv[]) {
     }
 
     try {
-        doip_uds::UdpListener listener;
-        doip_uds::TcpListener tcp_listener;
+        doip_uds::UdpListener listener(options.bind_address, options.udp_port);
+        doip_uds::TcpListener tcp_listener(options.bind_address, options.tcp_port);
         std::signal(SIGINT, handle_interrupt);
         std::cout << std::dec
                   << "Listening for DoIP vehicle-identification requests on UDP port "
                   << listener.port() << " and TCP connections on port " << tcp_listener.port()
-                  << ". Press Ctrl+C to stop.\n";
+                  << ". Press Ctrl+C to stop.\n"
+                  << std::flush;
         doip_uds::send_startup_vehicle_announcements(listener, identity);
 
         std::exception_ptr tcp_error;
