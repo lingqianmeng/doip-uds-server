@@ -4,7 +4,7 @@
 
 A C++17 project for building a simulated ECU diagnostic server using DoIP (ISO 13400-2) and UDS (ISO 14229-1), with Raspberry Pi as a target platform.
 
-> **Current status:** M3.5 UDP discovery, M4.1–M4.5 TCP transport and diagnostic flow, M5.1–M5.2 UDS SessionControl, TesterPresent, and simulated ECUReset, M6.1–M6.2 UDS DataIdentifier services, and M7.1–M7.2 UDS DTC services are implemented. The server handles UDP discovery on port 13400 and accepts multiple concurrent TCP clients, with a local 16 MiB per-frame payload limit. Further UDS services remain upcoming.
+> **Current status:** M3.5 UDP discovery, M4.1–M4.5 TCP transport and diagnostic flow, M5.1–M5.2 UDS SessionControl, TesterPresent, and simulated ECUReset, M6.1–M6.2 UDS DataIdentifier services, M7.1–M7.2 UDS DTC services, and M8.1–M8.2 simulator SecurityAccess are implemented. The server handles UDP discovery on port 13400 and accepts multiple concurrent TCP clients, with a local 16 MiB per-frame payload limit.
 
 ## Project layout
 
@@ -91,7 +91,9 @@ DoIP transport layer, it dispatches UDS SessionControl (`0x10`), TesterPresent
 WriteDataByIdentifier (`0x2E`) requests.
 ReadDTCInformation (`0x19`) supports status-masked count and record reports,
 and ClearDiagnosticInformation (`0x14`) clears all configured synthetic DTCs
-in extended session.
+in extended session. SecurityAccess (`0x27`) demonstrates the poster-listed
+Bootloader and AirbagDeployment seed/key pairs and gates writes to the sample
+writable DID.
 
 To see the TCP additions, the [M4.1 demo](docs/demo_m4_1_tcp_connections.md)
 shows TCP connections and concurrent clients alongside UDP discovery, while
@@ -110,6 +112,8 @@ The [M6 DID services demo](docs/demo_m6_did_services.md) reads the configured
 VIN and simulated DID, then demonstrates extended-session DID writes.
 The [M7 DTC services demo](docs/demo_m7_dtc_services.md) reads synthetic DTC
 counts and records, then clears the runtime DTC set.
+The [M8 SecurityAccess demo](docs/demo_m8_security_access.md) shows the
+simulator seed/key sequence guarding a DID write.
 
 Without presets, a debug build can be configured explicitly:
 
@@ -131,7 +135,7 @@ The core library exposes DoIP and vehicle-identification codecs, UDP/TCP
 transport, routing activation, diagnostic-message policy, and a
 transport-independent UDS dispatcher with per-connection session state. The
 executable handles UDP discovery and TCP routing activation, sends DoIP
-Diagnostic Message ACK/NACK frames, then dispatches the M5–M7 UDS services
+Diagnostic Message ACK/NACK frames, then dispatches the M5–M8 UDS services
 and sends any UDS response in a reverse-addressed Diagnostic Message. ECUReset
 is simulated and does not restart the process. M3.1 and M3.2
 standards-specific checks are based on the project's local reference copy of
@@ -145,7 +149,8 @@ See [`docs/m3_2_ecu_identity_configuration.md`](docs/m3_2_ecu_identity_configura
 [`docs/m4_3_routing_activation.md`](docs/m4_3_routing_activation.md),
 [`docs/m4_4_diagnostic_message_transport.md`](docs/m4_4_diagnostic_message_transport.md),
 [`docs/m4_5_tcp_diagnostic_flow.md`](docs/m4_5_tcp_diagnostic_flow.md),
-[`docs/m5_uds_dispatcher.md`](docs/m5_uds_dispatcher.md), and
+[`docs/m5_uds_dispatcher.md`](docs/m5_uds_dispatcher.md),
+[`docs/m8_security_access.md`](docs/m8_security_access.md), and
 [`docs/m3_4_vehicle_identification_handler.md`](docs/m3_4_vehicle_identification_handler.md)
 for implementation details.
 
@@ -178,7 +183,9 @@ Implement protocol logic in the core library, keeping the executable entry point
 - [x] M7 UDS DTC services, 0x19 / 0x14
   - [x] **M7.1 — Define the DTC boundary:** agreed on symbolic DTC configuration, supported ReadDTCInformation (`0x19`) subfunctions and status-mask filters, ClearDiagnosticInformation (`0x14`) scope, runtime clear behavior, session rules, and negative responses. See the [M7 DTC boundary](docs/m7_dtc_services.md).
   - [x] **M7.2 — Build the DTC services:** implemented the agreed DTC model and `0x19`/`0x14` behavior; added configuration, unit, and integration tests plus a dedicated M7 demo. See the [M7 DTC services guide](docs/m7_dtc_services.md) and [M7 DTC services demo](docs/demo_m7_dtc_services.md).
-- [ ] M8 0x27 SecurityAccess
+- [x] M8 UDS SecurityAccess, 0x27
+  - [x] **M8.1 — Define the SecurityAccess boundary:** define the simulator security level, seed/key exchange, per-connection authorization, protected DID operation, state reset behavior, and negative responses. See the [M8 SecurityAccess guide](docs/m8_security_access.md).
+  - [x] **M8.2 — Build the SecurityAccess service:** implement the simulator-only `0x27` exchange, guard writable DID access, and add dispatcher/TCP tests and a live demo.
 - [ ] M9 Python tester and integration tests
 - [ ] M10 Docker, CodeQL, Trivy
 
@@ -191,4 +198,6 @@ services under one milestone and one dedicated demo. M6.1 defined the DID
 boundary; M6.2 implemented `0x22` and `0x2E` with a dedicated guide and demo.
 M7.1 defined the symbolic DTC boundary; M7.2 implemented status-filtered
 `0x19` reads and `0x14` clear-all with configuration, tests, and a dedicated
-demo. Additional UDS services remain upcoming.
+demo. M8.1 defined the simulator-only SecurityAccess boundary; M8.2 implements
+`0x27` and uses its per-connection authorization to guard DID writes. Additional
+UDS services remain upcoming.

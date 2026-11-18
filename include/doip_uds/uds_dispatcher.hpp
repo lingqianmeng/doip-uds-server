@@ -11,6 +11,7 @@ namespace doip_uds {
 
 inline constexpr std::uint8_t kUdsServiceSessionControl = 0x10;
 inline constexpr std::uint8_t kUdsServiceEcuReset = 0x11;
+inline constexpr std::uint8_t kUdsServiceSecurityAccess = 0x27;
 inline constexpr std::uint8_t kUdsServiceReadDataByIdentifier = 0x22;
 inline constexpr std::uint8_t kUdsServiceWriteDataByIdentifier = 0x2E;
 inline constexpr std::uint8_t kUdsServiceReadDtcInformation = 0x19;
@@ -20,6 +21,10 @@ inline constexpr std::uint8_t kUdsServiceTesterPresent = 0x3E;
 inline constexpr std::uint8_t kUdsNegativeResponseCodeServiceNotSupported = 0x11;
 inline constexpr std::uint8_t kUdsNegativeResponseCodeSubfunctionNotSupported = 0x12;
 inline constexpr std::uint8_t kUdsNegativeResponseCodeIncorrectLength = 0x13;
+inline constexpr std::uint8_t kUdsNegativeResponseCodeConditionsNotCorrect = 0x22;
+inline constexpr std::uint8_t kUdsNegativeResponseCodeRequestSequenceError = 0x24;
+inline constexpr std::uint8_t kUdsNegativeResponseCodeSecurityAccessDenied = 0x33;
+inline constexpr std::uint8_t kUdsNegativeResponseCodeInvalidKey = 0x35;
 inline constexpr std::uint8_t kUdsNegativeResponseCodeRequestOutOfRange = 0x31;
 inline constexpr std::uint8_t kUdsNegativeResponseCodeServiceNotSupportedInActiveSession = 0x7E;
 inline constexpr std::uint8_t kUdsDtcStatusAvailabilityMask = 0xFF;
@@ -32,6 +37,7 @@ inline constexpr std::uint16_t kUdsVinDataIdentifier = kVinDataIdentifier;
 
 enum class UdsDiagnosticSession : std::uint8_t {
     default_session = 0x01,
+    programming_session = 0x02,
     extended_session = 0x03,
 };
 
@@ -41,6 +47,10 @@ enum class UdsEcuResetType : std::uint8_t {
 
 struct UdsConnectionState {
     UdsDiagnosticSession session{UdsDiagnosticSession::default_session};
+    std::optional<std::uint32_t> pending_security_seed;
+    std::optional<std::uint8_t> pending_security_key_subfunction;
+    std::uint32_t next_security_seed{0x1234};
+    bool security_unlocked{};
 };
 
 struct UdsDataIdentifier {

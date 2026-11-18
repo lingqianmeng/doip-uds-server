@@ -10,12 +10,28 @@ namespace {
 
 constexpr std::uint8_t kUdsNegativeResponseServiceId = 0x7F;
 constexpr std::uint8_t kSuppressPositiveResponseMask = 0x80;
+constexpr std::uint8_t kUdsPositiveResponseSecurityAccess = 0x67;
 constexpr std::uint8_t kUdsPositiveResponseReadDataByIdentifier = 0x62;
 constexpr std::uint8_t kUdsPositiveResponseWriteDataByIdentifier = 0x6E;
 constexpr std::uint8_t kUdsPositiveResponseReadDtcInformation = 0x59;
 constexpr std::uint8_t kUdsPositiveResponseClearDiagnosticInformation = 0x54;
 constexpr std::uint8_t kUdsReportNumberOfDtcByStatusMask = 0x01;
 constexpr std::uint8_t kUdsReportDtcByStatusMask = 0x02;
+constexpr std::uint8_t kUdsRequestSeedBootloaderSubfunction = 0x11;
+constexpr std::uint8_t kUdsSendKeyBootloaderSubfunction = 0x12;
+constexpr std::uint8_t kUdsRequestSeedAirbagSubfunction = 0x5F;
+constexpr std::uint8_t kUdsSendKeyAirbagSubfunction = 0x60;
+constexpr std::uint32_t kSimulatorSecurityKeyMask = 0x0000A5C3;
+
+void reset_security_state(UdsConnectionState& state) {
+    state.pending_security_seed.reset();
+    state.pending_security_key_subfunction.reset();
+    state.security_unlocked = false;
+}
+
+std::uint32_t simulator_security_key(std::uint32_t seed) {
+    return seed ^ kSimulatorSecurityKeyMask;
+}
 
 std::uint16_t read_u16(const std::vector<std::uint8_t>& bytes, std::size_t offset) {
     return static_cast<std::uint16_t>(
@@ -29,7 +45,21 @@ std::uint32_t read_u24(const std::vector<std::uint8_t>& bytes, std::size_t offse
            static_cast<std::uint32_t>(bytes[offset + 2]);
 }
 
+std::uint32_t read_u32(const std::vector<std::uint8_t>& bytes, std::size_t offset) {
+    return (static_cast<std::uint32_t>(bytes[offset]) << 24U) |
+           (static_cast<std::uint32_t>(bytes[offset + 1]) << 16U) |
+           (static_cast<std::uint32_t>(bytes[offset + 2]) << 8U) |
+           static_cast<std::uint32_t>(bytes[offset + 3]);
+}
+
 void append_u16(std::vector<std::uint8_t>& bytes, std::uint16_t value) {
+    bytes.push_back(static_cast<std::uint8_t>((value >> 8U) & 0xFFU));
+    bytes.push_back(static_cast<std::uint8_t>(value & 0xFFU));
+}
+
+void append_u32(std::vector<std::uint8_t>& bytes, std::uint32_t value) {
+    bytes.push_back(static_cast<std::uint8_t>((value >> 24U) & 0xFFU));
+    bytes.push_back(static_cast<std::uint8_t>((value >> 16U) & 0xFFU));
     bytes.push_back(static_cast<std::uint8_t>((value >> 8U) & 0xFFU));
     bytes.push_back(static_cast<std::uint8_t>(value & 0xFFU));
 }
@@ -116,6 +146,9 @@ UdsDispatchResult dispatch_uds_request(const std::vector<std::uint8_t>& request,
                                          UdsDiagnosticSession::default_session)) {
                 session = UdsDiagnosticSession::default_session;
             } else if (requested_session == static_cast<std::uint8_t>(
+                                                UdsDiagnosticSession::programming_session)) {
+                session = UdsDiagnosticSession::programming_session;
+            } else if (requested_session == static_cast<std::uint8_t>(
                                                 UdsDiagnosticSession::extended_session)) {
                 session = UdsDiagnosticSession::extended_session;
             } else {
@@ -124,6 +157,9 @@ UdsDispatchResult dispatch_uds_request(const std::vector<std::uint8_t>& request,
                         std::nullopt};
             }
 
+            if (state.session != session) {
+                reset_security_state(state);
+            }
             state.session = session;
             const auto response_subfunction =
                 session_control_response_subfunction(request[1]);
@@ -171,9 +207,100 @@ UdsDispatchResult dispatch_uds_request(const std::vector<std::uint8_t>& request,
                         std::nullopt};
             }
 
+            reset_security_state(state);
             state.session = UdsDiagnosticSession::default_session;
             return {positive_response(suppress, {0x51, reset_type}),
                     UdsEcuResetType::hard_reset};
+        }
+
+        case kUdsServiceSecurityAccess: {
+            if (request.size() < 2) {
+                return {negative_response(service_id, kUdsNegativeResponseCodeIncorrectLength),
+                        std::nullopt};
+            }
+
+            const auto subfunction = request[1];
+            const bool request_seed =
+                subfunction == kUdsRequestSeedBootloaderSubfunction ||
+                subfunction == kUdsRequestSeedAirbagSubfunction;
+            std::uint8_t key_subfunction;
+            UdsDiagnosticSession required_session;
+            if (subfunction == kUdsRequestSeedBootloaderSubfunction ||
+                subfunction == kUdsSendKeyBootloaderSubfunction) {
+                key_subfunction = kUdsSendKeyBootloaderSubfunction;
+                required_session = UdsDiagnosticSession::programming_session;
+            } else if (subfunction == kUdsRequestSeedAirbagSubfunction ||
+                       subfunction == kUdsSendKeyAirbagSubfunction) {
+                key_subfunction = kUdsSendKeyAirbagSubfunction;
+                required_session = UdsDiagnosticSession::extended_session;
+            } else {
+                return {negative_response(
+                            service_id, kUdsNegativeResponseCodeSubfunctionNotSupported),
+                        std::nullopt};
+            }
+
+            if (state.session != required_session) {
+                return {negative_response(
+                            service_id, kUdsNegativeResponseCodeConditionsNotCorrect),
+                        std::nullopt};
+            }
+
+            if (request_seed) {
+                if (request.size() != 2) {
+                    return {negative_response(
+                                service_id, kUdsNegativeResponseCodeIncorrectLength),
+                            std::nullopt};
+                }
+                if (state.security_unlocked) {
+                    return {std::vector<std::uint8_t>{kUdsPositiveResponseSecurityAccess,
+                                                      subfunction,
+                                                      0x00,
+                                                      0x00,
+                                                      0x00,
+                                                      0x00},
+                            std::nullopt};
+                }
+
+                const auto seed = state.next_security_seed;
+                state.next_security_seed += 0x0101U;
+                if (state.next_security_seed == 0) {
+                    state.next_security_seed = 1;
+                }
+                state.pending_security_seed = seed;
+                state.pending_security_key_subfunction = key_subfunction;
+                std::vector<std::uint8_t> response{kUdsPositiveResponseSecurityAccess,
+                                                   subfunction};
+                append_u32(response, seed);
+                return {std::move(response), std::nullopt};
+            }
+
+            if (request.size() != 6) {
+                return {negative_response(
+                            service_id, kUdsNegativeResponseCodeIncorrectLength),
+                        std::nullopt};
+            }
+            if (!state.pending_security_seed ||
+                state.pending_security_key_subfunction != subfunction) {
+                state.pending_security_seed.reset();
+                state.pending_security_key_subfunction.reset();
+                return {negative_response(
+                            service_id, kUdsNegativeResponseCodeRequestSequenceError),
+                        std::nullopt};
+            }
+
+            const auto supplied_key = read_u32(request, 2);
+            const auto expected_key = simulator_security_key(*state.pending_security_seed);
+            state.pending_security_seed.reset();
+            state.pending_security_key_subfunction.reset();
+            if (supplied_key != expected_key) {
+                return {negative_response(service_id, kUdsNegativeResponseCodeInvalidKey),
+                        std::nullopt};
+            }
+
+            state.security_unlocked = true;
+            return {std::vector<std::uint8_t>{kUdsPositiveResponseSecurityAccess,
+                                              subfunction},
+                    std::nullopt};
         }
 
         case kUdsServiceReadDataByIdentifier: {
@@ -218,6 +345,11 @@ UdsDispatchResult dispatch_uds_request(const std::vector<std::uint8_t>& request,
             }
             if (request.size() != did->second.value.size() + 3) {
                 return {negative_response(service_id, kUdsNegativeResponseCodeIncorrectLength),
+                        std::nullopt};
+            }
+            if (!state.security_unlocked) {
+                return {negative_response(
+                            service_id, kUdsNegativeResponseCodeSecurityAccessDenied),
                         std::nullopt};
             }
 
