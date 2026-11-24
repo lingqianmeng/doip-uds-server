@@ -39,7 +39,8 @@ README remains the top-level overview and setup guide.
 
 ## Upcoming roadmap steps
 
-M4.1–M9 are complete and have guides. M10 is upcoming. M5 through M9 were
+M4.1–M9 are complete and have guides. M10 is upcoming; see the
+[M10 container and security plan](m10_container_security_plan.md). M5 through M9 were
 each delivered as one milestone in two sub-milestones: a boundary-definition
 phase followed by implementation with one guide and one dedicated demo. When a
 step is implemented, add or update its guide and update this table in the same
