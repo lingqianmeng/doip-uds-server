@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <optional>
@@ -29,8 +30,11 @@ std::vector<std::uint8_t> make_request(
         static_cast<std::uint32_t>(encoded_payload.payload.size())};
     const auto encoded_header = doip_uds::encode_doip_header(header);
 
-    std::vector<std::uint8_t> datagram(encoded_header.begin(), encoded_header.end());
-    datagram.insert(datagram.end(), encoded_payload.payload.begin(), encoded_payload.payload.end());
+    std::vector<std::uint8_t> datagram(encoded_header.size() + encoded_payload.payload.size());
+    std::copy(encoded_header.begin(), encoded_header.end(), datagram.begin());
+    std::copy(encoded_payload.payload.begin(),
+              encoded_payload.payload.end(),
+              datagram.begin() + encoded_header.size());
     return datagram;
 }
 
