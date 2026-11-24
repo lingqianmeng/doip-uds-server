@@ -84,3 +84,12 @@ docker rm doip-uds
 The logs should include `DoIP server stopped.` and the container exit code
 should be `0`. The existing CTest suite also includes a Linux `SIGTERM`
 shutdown check. Docker smoke tests run in the GitHub Actions CI workflow.
+
+## CI build note
+
+The Debian Bookworm builder uses GCC 12 with optimized builds and warnings
+treated as errors. GCC diagnosed some valid `std::vector::insert` patterns in
+test-only DoIP message helpers as bounds warnings inside libstdc++; those
+helpers now allocate the final message size and copy into place. The resolved
+incident and CI verification are recorded in the
+[M10 plan](m10_container_security_plan.md#m103-ci-build-issue-gcc-12-vector-warnings).

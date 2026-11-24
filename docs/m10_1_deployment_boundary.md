@@ -3,10 +3,11 @@
 ## Status and scope
 
 M10.1 defines the intended deployment boundary. The package, image, service,
-and security workflows described here are M10.2 work, not existing features.
-Both deployments use the same simulator source and configuration format.
-The [M10 plan](m10_container_security_plan.md) records the implementation
-sequence and completion criteria.
+and security workflows are split across M10.2 (native Debian), M10.3
+(Docker), and M10.4 (security scanning and release documentation). Both
+deployments use the same simulator source and configuration format. The
+[M10 plan](m10_container_security_plan.md) records the implementation
+sequence, status, and completion criteria.
 
 The initial target is a 64-bit Linux system: Raspberry Pi OS on an ARM64 Pi
 or Debian on an AMD64 machine. Build and test directly on the target first;
@@ -84,9 +85,9 @@ to valid vehicle-identification requests. Test announcements and request/reply
 separately. An isolated CI unicast check is useful, but is not evidence that
 broadcast discovery works across a LAN.
 
-The current server handles `SIGINT`, not `SIGTERM`. M10.3 must add and test
-graceful `SIGTERM` handling for Docker stop. M10.2 will reuse the same signal
-handling for `systemd` stop.
+The server handles both `SIGINT` and `SIGTERM`; graceful `SIGTERM` shutdown
+is covered by the M10.3 Linux test and Docker smoke test. M10.2 should verify
+that `systemd` stop uses the same graceful shutdown behavior.
 
 ## CI, security, and acceptance
 

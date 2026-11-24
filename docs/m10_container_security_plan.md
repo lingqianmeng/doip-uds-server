@@ -2,10 +2,10 @@
 
 ## Status and goal
 
-This is the proposed plan for M10, not a description of implemented
-functionality. M10 will practice two deployments from the same source:
-a native Debian package with a `systemd` service and a Docker image. It also
-adds automated CodeQL and Trivy scanning.
+This plan tracks M10 deployment milestones: a native Debian package with a
+`systemd` service, a Docker image, and automated CodeQL and Trivy scanning.
+M10.3 implementation and CI results are recorded below; the other milestone
+sections describe their planned work and acceptance criteria.
 
 ## M10.1 - Define the boundary
 
@@ -73,6 +73,31 @@ shutdown checks, and its UDP/networking behavior is recorded.
 The x86_64 CI runner verifies the `amd64` image. Raspberry Pi `arm64` and LAN
 broadcast checks remain target-hardware validation and must not be reported
 as complete based on the CI run.
+
+### M10.3 CI build issue: GCC 12 vector warnings
+
+The Docker builder uses Debian Bookworm and GCC 12. During the optimized
+Release build (`-O3`), GCC reported `-Warray-bounds` and
+`-Wstringop-overflow` errors in libstdc++ while compiling test helpers that
+assembled DoIP messages by appending payload ranges to `std::vector<uint8_t>`
+with `vector::insert`. The project treats warnings as errors, so these
+diagnostics stopped the image build even though the vector operations were
+valid and no runtime bounds defect was identified.
+
+The first failure was in `tests/unit/test_tcp_transport.cpp`. Reserving vector
+capacity did not avoid the diagnostic; it moved to the next range insertion.
+Changing that helper to allocate the complete message size and copy the header
+and payload into their final ranges let compilation proceed, where the same
+pattern surfaced in `tests/unit/test_vehicle_identification_handler.cpp` and
+then in the TCP diagnostic-flow, diagnostic-message, and routing-activation
+integration helpers. Each build stopped at its first failing translation
+unit, which is why the failures appeared successively rather than together.
+
+All affected test helpers now allocate the final size up front and use
+`std::copy`. CI run `45502435451` passed the debug, release, and Docker
+build/smoke-test jobs at commit `f2b4004`. This was a GCC 12 optimized-build
+compatibility issue in test message construction, not a server runtime
+failure.
 
 ## M10.4 - Security scanning and release documentation
 
