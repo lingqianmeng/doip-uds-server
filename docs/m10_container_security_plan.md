@@ -9,6 +9,9 @@ adds automated CodeQL and Trivy scanning.
 
 ## M10.1 - Define the boundary
 
+See the [M10.1 deployment boundary](m10_1_deployment_boundary.md) for the
+package, container, networking, and verification scope.
+
 - Build and test natively on the target first, then package the executable,
   configuration, and `systemd` service as a `.deb`. Practice installation,
   automatic startup, logs, upgrades, and removal.
@@ -36,8 +39,7 @@ adds automated CodeQL and Trivy scanning.
 2. Add a `Dockerfile` and `.dockerignore`, excluding build directories,
    captures, and the local PDF from the build context.
 3. Add graceful `SIGTERM` handling alongside `SIGINT` so `docker stop` and
-   `systemd` can
-   shut down the server cleanly. Test the shutdown behavior.
+   `systemd` can shut down the server cleanly. Test the shutdown behavior.
 4. Add CI builds and smoke tests for the native package and image. For the
    image, run the existing loopback-only Python tester against the published
    TCP port. Verify UDP discovery separately and document platform-dependent
