@@ -193,7 +193,9 @@ Implement protocol logic in the core library, keeping the executable entry point
   - [x] **M9.2 — Build the tester and integration test:** add the Python smoke-test CLI, configurable loopback/ephemeral server ports, and a CTest integration test. See the [M9 Python tester demo](docs/demo_m9_python_tester.md).
 - [ ] M10 native and Docker deployment, CodeQL, Trivy
   - [x] **M10.1 — Define the deployment boundary:** describe native `.deb`/`systemd` and Docker deployment, networking, security scanning, and verification. See the [M10.1 deployment boundary](docs/m10_1_deployment_boundary.md).
-  - [ ] **M10.2 — Implement both deployments:** package and test the server, add security workflows, and document the deployment demos.
+  - [ ] **M10.2 — Native Debian deployment:** add graceful shutdown, package the server as a `.deb` with a `systemd` service, and verify package/service lifecycle on Linux.
+  - [ ] **M10.3 — Docker deployment:** build a non-root runtime image, test TCP/UDP behavior and shutdown, and document host/bridge networking.
+  - [ ] **M10.4 — Security scanning and documentation:** add CodeQL and Trivy workflows, deployment guides/demos, and final README/roadmap links.
 
 M3 completed the UDP vehicle-identification flow, from independently tested
 payload and configuration components to end-to-end discovery. M4.1–M4.5 are
@@ -207,4 +209,4 @@ M7.1 defined the symbolic DTC boundary; M7.2 implemented status-filtered
 demo. M8.1 defined the simulator-only SecurityAccess boundary; M8.2 implements
 `0x27` and uses its per-connection authorization to guard DID writes. M9 adds a
 loopback-only Python tester and launches it against an isolated server process
-in CTest. M10.1 defines the deployment boundary; M10.2 remains upcoming.
+in CTest. M10.1 defines the deployment boundary; M10.2–M10.4 remain upcoming.
