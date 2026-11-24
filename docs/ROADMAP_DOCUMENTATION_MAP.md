@@ -32,6 +32,7 @@ For milestones without a minor number, omit that segment (for example,
 | M7 — UDS DTC services | [m7_dtc_services](m7_dtc_services.md), [m7_supported_dtcs](m7_supported_dtcs.md), and [demo_m7_dtc_services](demo_m7_dtc_services.md) | Documents the supported symbolic simulator-only DTCs, implements status-filtered `0x19` count/list and extended-session `0x14` clear-all, and includes configuration, unit/integration tests, and a live demo. |
 | M8 — UDS SecurityAccess | [m8_security_access](m8_security_access.md) and [demo_m8_security_access](demo_m8_security_access.md) | Defines and implements a simulator-only `0x27` seed/key exchange with per-connection authorization for writable DID access, plus unit/TCP tests and a loopback demo. |
 | M9 — Python DoIP tester | [m9_python_tester](m9_python_tester.md) and [demo_m9_python_tester](demo_m9_python_tester.md) | Adds a loopback-only standard-library tester, validates DoIP framing and ACK/UDS sequencing, and runs it against an isolated server process in CTest. |
+| M10.1 — Deployment boundary | [m10_1_deployment_boundary](m10_1_deployment_boundary.md) | Defines the native package, container, networking, security, and verification scope; implementation remains upcoming. |
 
 The M3 breakdown itself was recorded in the README in PR #5. The detailed
 guides explain the implementation and tests for individual features; the
@@ -39,8 +40,8 @@ README remains the top-level overview and setup guide.
 
 ## Upcoming roadmap steps
 
-M4.1–M9 are complete and have guides. M10 is upcoming; see the
-[M10 container and security plan](m10_container_security_plan.md). M5 through M9 were
+M4.1–M9 and the M10.1 boundary are complete and have guides. M10.2 is upcoming;
+see the [M10 container and security plan](m10_container_security_plan.md). M5 through M9 were
 each delivered as one milestone in two sub-milestones: a boundary-definition
 phase followed by implementation with one guide and one dedicated demo. When a
 step is implemented, add or update its guide and update this table in the same
