@@ -1,0 +1,14 @@
+.git
+.github
+build/
+build-*/
+build-check/
+build-test/
+captures/
+docs/
+*.pdf
+anonymized-dtcs-for-deployment.md
+doip-uds-server/
+stock-monitor-cpp/
+out/
+vcpkg_installed/

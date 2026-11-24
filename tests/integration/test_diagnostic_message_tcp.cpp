@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <optional>
@@ -142,8 +143,9 @@ std::vector<std::uint8_t> make_message(std::uint16_t payload_type,
         {doip_uds::kDoipProtocolVersion,
          payload_type,
          static_cast<std::uint32_t>(payload.size())});
-    std::vector<std::uint8_t> message(header.begin(), header.end());
-    message.insert(message.end(), payload.begin(), payload.end());
+    std::vector<std::uint8_t> message(header.size() + payload.size());
+    std::copy(header.begin(), header.end(), message.begin());
+    std::copy(payload.begin(), payload.end(), message.begin() + header.size());
     return message;
 }
 

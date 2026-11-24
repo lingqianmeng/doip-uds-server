@@ -42,6 +42,9 @@ README remains the top-level overview and setup guide.
 
 M4.1–M9 and the M10.1 boundary are complete and have guides. M10.2–M10.4 are
 upcoming; see the [M10 container and security plan](m10_container_security_plan.md).
+The draft [M10.3 Docker demo](demo_m10_3_docker.md) describes the planned
+container workflow; its implementation and checks are not complete until
+verified.
 M5 through M9 were
 each delivered as one milestone in two sub-milestones: a boundary-definition
 phase followed by implementation with one guide and one dedicated demo. When a

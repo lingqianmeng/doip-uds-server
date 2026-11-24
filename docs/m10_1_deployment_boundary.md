@@ -3,10 +3,11 @@
 ## Status and scope
 
 M10.1 defines the intended deployment boundary. The package, image, service,
-and security workflows described here are M10.2 work, not existing features.
-Both deployments use the same simulator source and configuration format.
-The [M10 plan](m10_container_security_plan.md) records the implementation
-sequence and completion criteria.
+and security workflows are split across M10.2 (native Debian), M10.3
+(Docker), and M10.4 (security scanning and release documentation). Both
+deployments use the same simulator source and configuration format. The
+[M10 plan](m10_container_security_plan.md) records the implementation
+sequence, status, and completion criteria.
 
 The initial target is a 64-bit Linux system: Raspberry Pi OS on an ARM64 Pi
 or Debian on an AMD64 machine. Build and test directly on the target first;
@@ -84,8 +85,9 @@ to valid vehicle-identification requests. Test announcements and request/reply
 separately. An isolated CI unicast check is useful, but is not evidence that
 broadcast discovery works across a LAN.
 
-The current server handles `SIGINT`, not `SIGTERM`. M10.2 must add and test
-graceful `SIGTERM` handling for both `systemd` stop and Docker stop.
+The server handles both `SIGINT` and `SIGTERM`; graceful `SIGTERM` shutdown
+is covered by the M10.3 Linux test and Docker smoke test. M10.2 should verify
+that `systemd` stop uses the same graceful shutdown behavior.
 
 ## CI, security, and acceptance
 
@@ -99,6 +101,9 @@ graceful `SIGTERM` handling for both `systemd` stop and Docker stop.
   deployment for TCP diagnostics. Check UDP discovery separately, including a
   real LAN peer for broadcast behavior; the Python tester does not test UDP.
   Verify clean shutdown and port release for both variants.
+- The Docker CI smoke test should verify non-root execution, loopback TCP
+  diagnostics, UDP unicast request/reply, and clean SIGTERM shutdown. It does
+  not replace ARM64, systemd, or LAN broadcast checks.
 - Run CodeQL for C++ and Python on pushes, pull requests, and a weekly
   schedule, using a manual CMake build for C++. Run Trivy against repository
   files and the image; fail for fixable HIGH and CRITICAL findings. Upload

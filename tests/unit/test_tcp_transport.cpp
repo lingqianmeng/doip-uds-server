@@ -1,5 +1,6 @@
 #include "doip_uds/tcp_transport.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <optional>
@@ -105,8 +106,9 @@ std::vector<std::uint8_t> make_message(std::uint16_t payload_type,
         payload_type,
         static_cast<std::uint32_t>(payload.size())};
     const auto encoded_header = doip_uds::encode_doip_header(header);
-    std::vector<std::uint8_t> message(encoded_header.begin(), encoded_header.end());
-    message.insert(message.end(), payload.begin(), payload.end());
+    std::vector<std::uint8_t> message(encoded_header.size() + payload.size());
+    std::copy(encoded_header.begin(), encoded_header.end(), message.begin());
+    std::copy(payload.begin(), payload.end(), message.begin() + encoded_header.size());
     return message;
 }
 
