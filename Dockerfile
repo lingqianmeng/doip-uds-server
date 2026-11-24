@@ -13,10 +13,12 @@ WORKDIR /src
 COPY . .
 
 RUN cmake -S . -B /build -G Ninja \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DDOIP_BUILD_TESTS=ON \
-    && cmake --build /build --parallel \
-    && ctest --test-dir /build --output-on-failure
+    -DCMAKE_BUILD_TYPE=Release \
+    -DDOIP_BUILD_TESTS=ON
+
+RUN cmake --build /build --parallel 2
+
+RUN ctest --test-dir /build --output-on-failure
 
 FROM debian:bookworm-slim AS runtime
 
