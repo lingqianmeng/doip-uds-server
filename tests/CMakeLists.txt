@@ -38,3 +38,14 @@ add_test(
     --config ${PROJECT_SOURCE_DIR}/config/ecu_config.json
 )
 set_tests_properties(PythonDoipTesterIntegration PROPERTIES TIMEOUT 45)
+
+if(UNIX)
+  add_test(
+    NAME ServerSigtermShutdown
+    COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_server_shutdown.py
+      --server $<TARGET_FILE:doip_server>
+      --config ${PROJECT_SOURCE_DIR}/config/ecu_config.json
+  )
+  set_tests_properties(ServerSigtermShutdown PROPERTIES TIMEOUT 15)
+endif()

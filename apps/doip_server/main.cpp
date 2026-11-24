@@ -325,6 +325,7 @@ int main(int argc, char* argv[]) {
         doip_uds::UdpListener listener(options.bind_address, options.udp_port);
         doip_uds::TcpListener tcp_listener(options.bind_address, options.tcp_port);
         std::signal(SIGINT, handle_interrupt);
+        std::signal(SIGTERM, handle_interrupt);
         std::cout << std::dec
                   << "Listening for DoIP vehicle-identification requests on UDP port "
                   << listener.port() << " and TCP connections on port " << tcp_listener.port()

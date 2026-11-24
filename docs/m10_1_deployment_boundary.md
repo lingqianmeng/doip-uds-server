@@ -84,8 +84,9 @@ to valid vehicle-identification requests. Test announcements and request/reply
 separately. An isolated CI unicast check is useful, but is not evidence that
 broadcast discovery works across a LAN.
 
-The current server handles `SIGINT`, not `SIGTERM`. M10.2 must add and test
-graceful `SIGTERM` handling for both `systemd` stop and Docker stop.
+The current server handles `SIGINT`, not `SIGTERM`. M10.3 must add and test
+graceful `SIGTERM` handling for Docker stop. M10.2 will reuse the same signal
+handling for `systemd` stop.
 
 ## CI, security, and acceptance
 
@@ -99,6 +100,9 @@ graceful `SIGTERM` handling for both `systemd` stop and Docker stop.
   deployment for TCP diagnostics. Check UDP discovery separately, including a
   real LAN peer for broadcast behavior; the Python tester does not test UDP.
   Verify clean shutdown and port release for both variants.
+- The Docker CI smoke test should verify non-root execution, loopback TCP
+  diagnostics, UDP unicast request/reply, and clean SIGTERM shutdown. It does
+  not replace ARM64, systemd, or LAN broadcast checks.
 - Run CodeQL for C++ and Python on pushes, pull requests, and a weekly
   schedule, using a manual CMake build for C++. Run Trivy against repository
   files and the image; fail for fixable HIGH and CRITICAL findings. Upload

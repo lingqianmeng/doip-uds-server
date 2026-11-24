@@ -33,3 +33,50 @@ jobs:
 
       - name: Test
         run: ctest --preset ${{ matrix.build_type }}
+
+  docker-smoke:
+    name: Docker build & smoke test
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build --tag doip-uds-server:m10 .
+
+      - name: Run diagnostic and UDP smoke tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          container_id=""
+          cleanup() {
+            if [ -n "$container_id" ] && docker inspect "$container_id" >/dev/null 2>&1; then
+              docker rm --force "$container_id" >/dev/null
+            fi
+          }
+          trap cleanup EXIT
+
+          container_id=$(docker run --detach \
+            --publish 127.0.0.1:18400:13400/tcp \
+            --publish 127.0.0.1:18400:13400/udp \
+            doip-uds-server:m10)
+
+          for attempt in $(seq 1 30); do
+            if docker logs "$container_id" 2>&1 | grep -q '^Listening for DoIP'; then
+              break
+            fi
+            sleep 1
+          done
+          docker logs "$container_id" 2>&1 | grep -q '^Listening for DoIP'
+          test "$(docker inspect --format '{{.Config.User}}' "$container_id")" = "65532:65532"
+          docker exec "$container_id" /bin/sh -c 'test "$(id -u)" -ne 0'
+
+          python3 tools/doip_tester.py demo --port 18400
+          python3 tests/integration/test_doip_udp_smoke.py --port 18400
+
+          docker stop --time 5 "$container_id"
+          test "$(docker inspect --format '{{.State.ExitCode}}' "$container_id")" = "0"
+          docker logs "$container_id" 2>&1 | grep -q 'DoIP server stopped.'
+          docker rm "$container_id" >/dev/null
+          container_id=""

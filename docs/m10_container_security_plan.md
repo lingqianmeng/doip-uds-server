@@ -33,7 +33,8 @@ package, container, networking, and verification scope.
 
 ## M10.2 - Native Debian deployment
 
-- Add graceful `SIGTERM` handling alongside `SIGINT` and test orderly shutdown.
+- Reuse the graceful `SIGTERM` handling introduced in M10.3 for `systemd`
+  stop and test orderly service shutdown.
 - Add CMake install/package rules for a target-architecture `.deb` containing
   the server, administrator-editable default configuration, and `systemd`
   unit. Keep package install/upgrade from unexpectedly enabling or starting
@@ -46,10 +47,12 @@ package, container, networking, and verification scope.
 
 **Done when:** the package can be built and tested on the target architecture,
 service lifecycle and config handling meet the boundary, TCP diagnostics pass,
-and shutdown is clean.
+and systemd shutdown is clean.
 
 ## M10.3 - Docker deployment
 
+- Add graceful `SIGTERM` handling alongside `SIGINT`; Docker stop sends
+  `SIGTERM` to the container's main process.
 - Add a multi-stage `Dockerfile` and `.dockerignore`. Build and test in the
   builder stage; keep the runtime image small, use the explicit config path,
   and run as a non-root user.
@@ -66,6 +69,10 @@ and shutdown is clean.
 **Done when:** the image builds for the selected target architecture, runs
 with the documented config and non-root identity, passes diagnostic and
 shutdown checks, and its UDP/networking behavior is recorded.
+
+The x86_64 CI runner verifies the `amd64` image. Raspberry Pi `arm64` and LAN
+broadcast checks remain target-hardware validation and must not be reported
+as complete based on the CI run.
 
 ## M10.4 - Security scanning and release documentation
 
