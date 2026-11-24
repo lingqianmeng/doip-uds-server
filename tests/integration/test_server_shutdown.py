@@ -2,11 +2,18 @@
 """Verify that SIGTERM triggers an orderly server shutdown."""
 
 import argparse
-import selectors
+import queue
 import signal
 import subprocess
 import sys
+import threading
 import time
+
+
+def read_output(stream, lines):
+    for line in stream:
+        lines.put(line)
+    lines.put(None)
 
 
 def main():
@@ -33,27 +40,40 @@ def main():
         bufsize=1,
     )
     output = []
+    output_queue = queue.Queue()
+    reader = threading.Thread(
+        target=read_output, args=(process.stdout, output_queue), daemon=True
+    )
+    reader.start()
     try:
         deadline = time.monotonic() + 10
         ready = False
-        with selectors.DefaultSelector() as selector:
-            selector.register(process.stdout, selectors.EVENT_READ)
-            while time.monotonic() < deadline:
-                if process.poll() is not None:
-                    break
-                if not selector.select(timeout=0.1):
-                    continue
-                line = process.stdout.readline()
-                output.append(line)
-                if line.startswith("Listening for DoIP"):
-                    ready = True
-                    break
+        while time.monotonic() < deadline:
+            if process.poll() is not None:
+                break
+            try:
+                line = output_queue.get(timeout=0.1)
+            except queue.Empty:
+                continue
+            if line is None:
+                break
+            output.append(line)
+            if line.startswith("Listening for DoIP"):
+                ready = True
+                break
         if not ready:
             raise RuntimeError("Server did not start listening:\n" + "".join(output))
 
         process.send_signal(signal.SIGTERM)
-        remaining, _ = process.communicate(timeout=5)
-        output.append(remaining)
+        process.wait(timeout=5)
+        reader.join(timeout=1)
+        while True:
+            try:
+                line = output_queue.get_nowait()
+            except queue.Empty:
+                break
+            if line is not None:
+                output.append(line)
         complete_output = "".join(output)
         if process.returncode != 0:
             raise RuntimeError(
@@ -67,6 +87,7 @@ def main():
         if process.poll() is None:
             process.kill()
             process.wait()
+        reader.join(timeout=1)
         print(error, file=sys.stderr)
         return 1
 
