@@ -286,6 +286,11 @@ void accept_tcp_connections(doip_uds::TcpListener& listener,
 }  // namespace
 
 int main(int argc, char* argv[]) {
+    // Without a TTY, stdout is fully buffered. Flush every insertion so
+    // [TCP], [UDS], and [VAM] lines appear in `docker logs` immediately.
+    std::cout << std::unitbuf;
+    std::cerr << std::unitbuf;
+
     ServerOptions options;
     try {
         options = parse_server_options(argc, argv);
@@ -331,6 +336,7 @@ int main(int argc, char* argv[]) {
                   << listener.port() << " and TCP connections on port " << tcp_listener.port()
                   << ". Press Ctrl+C to stop.\n"
                   << std::flush;
+        // Announcement sends are best effort and do not stop the server.
         doip_uds::send_startup_vehicle_announcements(listener, identity);
 
         std::exception_ptr tcp_error;

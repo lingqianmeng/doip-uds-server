@@ -51,7 +51,9 @@ current `NPF_Loopback` index for `9`.
 The server loads `config\ecu_config.json` and sends three startup VAMs to
 `255.255.255.255:13400`. The first is sent after a randomized delay of up to
 500 ms, then the next two are sent 500 ms apart. The console labels them
-`[VAM startup]` and prints the configured VIN.
+`[VAM startup]` and prints the configured VIN. If a broadcast cannot be sent,
+the console shows `[VAM startup] Warning: announcement N/3 failed: ...` and
+the server keeps running. The attempts stay 500 ms apart.
 
 **Terminal 3 — send a VIR and receive the response:**
 
