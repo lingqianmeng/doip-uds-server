@@ -57,6 +57,7 @@ Engine, the bridge network with published TCP and UDP port 13400 served the
 Python tester demo from Linux and from Windows, and `docker stop` shut the
 container down gracefully. Since PR #43, a failed startup broadcast is
 non-fatal: the server logs a `[VAM startup] Warning` and keeps running.
+The [M10.3 Docker demo](demo_m10_3_docker.md) records those commands.
 
 Raspberry Pi `arm64` builds and LAN broadcast validation on target hardware
 remain follow-ups. Those checks are not claimed as done.
