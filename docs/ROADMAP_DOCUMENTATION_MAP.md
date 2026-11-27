@@ -45,6 +45,9 @@ upcoming; see the [M10 container and security plan](m10_container_security_plan.
 The draft [M10.3 Docker demo](demo_m10_3_docker.md) describes the planned
 container workflow; its implementation and checks are not complete until
 verified.
+The [Docker run and test guide](m10_3_docker_run_and_test.md) gives the Linux
+and WSL2 commands for building the image, running it on the default bridge
+network, and checking it with the Python tester.
 M5 through M9 were
 each delivered as one milestone in two sub-milestones: a boundary-definition
 phase followed by implementation with one guide and one dedicated demo. When a

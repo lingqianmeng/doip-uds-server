@@ -123,6 +123,9 @@ The [M8 SecurityAccess demo](docs/demo_m8_security_access.md) shows the
 simulator seed/key sequence guarding a DID write.
 The [M9 Python tester demo](docs/demo_m9_python_tester.md) exercises the local
 simulator through a standard-library DoIP client.
+The [Docker run and test guide](docs/m10_3_docker_run_and_test.md) builds the
+image, publishes TCP and UDP port 13400, and runs that tester against the
+container.
 
 Without presets, a debug build can be configured explicitly:
 
@@ -201,7 +204,7 @@ Implement protocol logic in the core library, keeping the executable entry point
 - [ ] M10 native and Docker deployment, CodeQL, Trivy
   - [x] **M10.1 — Define the deployment boundary:** describe native `.deb`/`systemd` and Docker deployment, networking, security scanning, and verification. See the [M10.1 deployment boundary](docs/m10_1_deployment_boundary.md).
   - [ ] **M10.2 — Native Debian deployment:** add graceful shutdown, package the server as a `.deb` with a `systemd` service, and verify package/service lifecycle on Linux.
-  - [ ] **M10.3 — Docker deployment:** build a non-root runtime image, test TCP/UDP behavior and SIGTERM shutdown, and document host/bridge networking. See the [M10.3 Docker demo](docs/demo_m10_3_docker.md).
+  - [ ] **M10.3 — Docker deployment:** build a non-root runtime image, test TCP/UDP behavior and SIGTERM shutdown, and document host/bridge networking. See the [M10.3 Docker demo](docs/demo_m10_3_docker.md) and the [Docker run and test guide](docs/m10_3_docker_run_and_test.md).
   - [ ] **M10.4 — Security scanning and documentation:** add CodeQL and Trivy workflows, deployment guides/demos, and final README/roadmap links.
 
 M3 completed the UDP vehicle-identification flow, from independently tested
