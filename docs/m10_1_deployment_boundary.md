@@ -20,7 +20,8 @@ simulator's deterministic SecurityAccess is not production security.
 The current CMake build produces `doip_server` and runs C++ unit and
 integration tests and the Python tester integration through CTest. CMake does
 not yet define an installation or Debian package. The existing CI runs debug
-and release builds on Ubuntu; it does not build either deployment artifact.
+and release builds on Ubuntu and a Docker image smoke test. It does not yet
+build the Debian package.
 
 The server loads ECU identity, DID initial values, and synthetic DTCs from a
 JSON file at startup. By default the path is relative to the working directory.
