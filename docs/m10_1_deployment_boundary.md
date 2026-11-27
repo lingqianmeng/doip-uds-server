@@ -81,7 +81,8 @@ LAN broadcasts reach the container or that its startup broadcasts reach the
 LAN. Check discovery from another machine and document observed platform and
 network limitations rather than claiming bridge broadcast support.
 The server sends startup announcements to `255.255.255.255:13400` and replies
-to valid vehicle-identification requests. Test announcements and request/reply
+to valid vehicle-identification requests. A refused broadcast or response send
+is logged and is not a startup failure. Test announcements and request/reply
 separately. An isolated CI unicast check is useful, but is not evidence that
 broadcast discovery works across a LAN.
 

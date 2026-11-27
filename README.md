@@ -60,7 +60,14 @@ the broadcast on the network, start Wireshark on the active network adapter
 before starting the server and use the display filter `udp.port == 13400`.
 Each VAM is a DoIP payload type `0x0004`; the VIN is in the first 17 payload
 bytes (UDP payload offsets 8–24). The server also prints a `[VAM startup]` log
-line for each announcement.
+line for each announcement. Sending an announcement is best effort. If the
+host rejects the limited broadcast, the server logs
+`[VAM startup] Warning: announcement 1/3 failed: ...` and still waits before
+the remaining announcements. The process keeps serving TCP diagnostics and
+UDP identification requests. A failed identification response is logged as
+`[VAM response] Warning: ...` and does not stop the server unless the UDP
+socket itself is unusable. Failure to bind a port, or to load the ECU
+configuration, is still fatal.
 
 ```sh
 # Discover on the local network (broadcast VIR, unicast VAM response)

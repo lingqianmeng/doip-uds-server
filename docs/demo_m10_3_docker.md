@@ -56,6 +56,15 @@ publishing, then check broadcasts from a separate LAN peer. Docker Desktop
 networking differs from native Linux Docker; record actual results instead of
 assuming broadcast support.
 
+Startup announcements are best effort. If the host rejects the limited
+broadcast, for example `sendto: Operation not permitted` with
+`docker run --network host` on WSL2, the server logs a `[VAM startup] Warning`
+and keeps serving TCP diagnostics and UDP identification requests. A refused
+identification response is logged the same way. Failure to bind a port or to
+load configuration still stops the process. Log lines are flushed so
+`docker logs` shows `[TCP]`, `[UDS]`, and `[VAM]` output without allocating a
+TTY.
+
 To supply a different ECU configuration, mount a readable JSON file at the
 container path and recreate the container:
 

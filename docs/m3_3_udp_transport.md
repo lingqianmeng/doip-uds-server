@@ -82,6 +82,18 @@ configured VIN, logical address, EID, and GID. Startup sends and request
 responses are labeled separately in the console as `[VAM startup]` and
 `[VAM response]`.
 
+Announcement sends are best effort, as in ISO 13400-2. If `send_to()` fails,
+for example with `sendto: Operation not permitted` when the host rejects the
+limited broadcast, `send_startup_vehicle_announcements()` logs
+`[VAM startup] Warning: announcement 1/3 failed: ...` and still waits the
+normal interval before the next announcement. The process keeps running. A
+failed identification response is logged as
+`[VAM response] Warning: ...` and the receive loop continues. Send errors that
+mean the listening socket is unusable, such as a bad file descriptor, still
+propagate from `process_next_vehicle_identification_request()` and stop the
+server. Receive errors do too. Failures to bind the UDP or TCP port, and an
+invalid ECU configuration, remain fatal.
+
 The standard-library client `tools/doip_vir_vam_demo.py` sends a broadcast
 vehicle-identification request (VIR, payload type `0x0001`) and waits for the
 server's unicast VAM response. Run it from the repository root while the

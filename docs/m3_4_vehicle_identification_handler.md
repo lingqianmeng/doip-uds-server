@@ -32,7 +32,8 @@ exact payload length.
 Malformed headers, unsupported versions or payload types, incorrect lengths,
 and non-matching VIN/EID values produce no response. This function does not
 send the response; `process_next_vehicle_identification_request()` handles
-receiving and sending around it.
+receiving and sending around it. A failed response send is logged and does not
+stop the server unless the socket itself is unusable.
 
 ## Implementation and tests
 
@@ -45,6 +46,11 @@ receiving and sending around it.
 - `tests/unit/test_vehicle_identification_handler.cpp` covers broadcast and
   matching targeted requests, identity mismatches, malformed datagrams, and
   response header and identity fields.
+- `tests/unit/test_vehicle_identification_server.cpp` injects a transport whose
+  send fails. Startup announcements log a warning and continue on the normal
+  interval instead of throwing. An identification response that fails with a
+  permission error is logged and ignored; a bad file descriptor still
+  propagates, as does a receive failure.
 - `tests/integration/test_vehicle_identification_udp.cpp` verifies a broadcast
   request and identity response using real UDP sockets on loopback.
 
