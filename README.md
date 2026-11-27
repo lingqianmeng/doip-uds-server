@@ -123,9 +123,8 @@ The [M8 SecurityAccess demo](docs/demo_m8_security_access.md) shows the
 simulator seed/key sequence guarding a DID write.
 The [M9 Python tester demo](docs/demo_m9_python_tester.md) exercises the local
 simulator through a standard-library DoIP client.
-The [Docker run and test guide](docs/m10_3_docker_run_and_test.md) builds the
-image, publishes TCP and UDP port 13400, and runs that tester against the
-container.
+The [M10.3 Docker demo](docs/demo_m10_3_docker.md) builds the image, publishes
+TCP and UDP port 13400, and runs that tester against the container.
 
 Without presets, a debug build can be configured explicitly:
 
@@ -201,10 +200,10 @@ Implement protocol logic in the core library, keeping the executable entry point
 - [x] M9 Python tester and integration tests
   - [x] **M9.1 — Define the tester boundary:** keep the standard-library client local to the simulator, validate DoIP framing and ACK/UDS response sequencing, and avoid arbitrary UDS or key-guessing modes. See the [M9 Python tester guide](docs/m9_python_tester.md).
   - [x] **M9.2 — Build the tester and integration test:** add the Python smoke-test CLI, configurable loopback/ephemeral server ports, and a CTest integration test. See the [M9 Python tester demo](docs/demo_m9_python_tester.md).
-- [ ] M10 native and Docker deployment, CodeQL, Trivy
+- [ ] M10 native and Docker deployment, CodeQL, Trivy. See the [M10 container and security plan](docs/m10_container_security_plan.md).
   - [x] **M10.1 — Define the deployment boundary:** describe native `.deb`/`systemd` and Docker deployment, networking, security scanning, and verification. See the [M10.1 deployment boundary](docs/m10_1_deployment_boundary.md).
   - [ ] **M10.2 — Native Debian deployment:** add graceful shutdown, package the server as a `.deb` with a `systemd` service, and verify package/service lifecycle on Linux.
-  - [ ] **M10.3 — Docker deployment:** build a non-root runtime image, test TCP/UDP behavior and SIGTERM shutdown, and document host/bridge networking. See the [M10.3 Docker demo](docs/demo_m10_3_docker.md) and the [Docker run and test guide](docs/m10_3_docker_run_and_test.md).
+  - [x] **M10.3 — Docker deployment:** build a non-root runtime image, test TCP/UDP behavior and SIGTERM shutdown, and document host/bridge networking. See the [M10.3 Docker demo](docs/demo_m10_3_docker.md).
   - [ ] **M10.4 — Security scanning and documentation:** add CodeQL and Trivy workflows, deployment guides/demos, and final README/roadmap links.
 
 M3 completed the UDP vehicle-identification flow, from independently tested
@@ -219,4 +218,4 @@ M7.1 defined the symbolic DTC boundary; M7.2 implemented status-filtered
 demo. M8.1 defined the simulator-only SecurityAccess boundary; M8.2 implements
 `0x27` and uses its per-connection authorization to guard DID writes. M9 adds a
 loopback-only Python tester and launches it against an isolated server process
-in CTest. M10.1 defines the deployment boundary; M10.2–M10.4 remain upcoming.
+in CTest. M10.1 defines the deployment boundary and M10.3 completes Docker deployment for amd64; M10.2 and M10.4 remain upcoming.

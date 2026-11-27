@@ -93,5 +93,5 @@ length to assemble and parse complete messages.
 
 The codec provides the first step for interpreting a DoIP message. Later work
 can use the decoded payload type to select message handling and the length to
-read the corresponding payload. M3 adds UDP vehicle identification; TCP
-transport and diagnostic-message handling are planned for M4.
+read the corresponding payload. M3 adds UDP vehicle identification; M4 adds
+TCP transport and diagnostic-message handling.

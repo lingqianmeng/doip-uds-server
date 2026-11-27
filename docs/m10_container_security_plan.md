@@ -4,8 +4,8 @@
 
 This plan tracks M10 deployment milestones: a native Debian package with a
 `systemd` service, a Docker image, and automated CodeQL and Trivy scanning.
-M10.3 implementation and CI results are recorded below; the other milestone
-sections describe their planned work and acceptance criteria.
+M10.3 is done for `amd64`; verification is recorded in that section. The
+M10.2 and M10.4 sections describe their planned work and acceptance criteria.
 
 ## M10.1 - Define the boundary
 
@@ -51,6 +51,17 @@ and systemd shutdown is clean.
 
 ## M10.3 - Docker deployment
 
+**Status:** Done for `amd64`. GitHub Actions CI builds the image and runs the
+Docker smoke test. On the owner's work PC, WSL2 Ubuntu 24.04 with Docker
+Engine, the bridge network with published TCP and UDP port 13400 served the
+Python tester demo from Linux and from Windows, and `docker stop` shut the
+container down gracefully. Since PR #43, a failed startup broadcast is
+non-fatal: the server logs a `[VAM startup] Warning` and keeps running.
+The [M10.3 Docker demo](demo_m10_3_docker.md) records those commands.
+
+Raspberry Pi `arm64` builds and LAN broadcast validation on target hardware
+remain follow-ups. Those checks are not claimed as done.
+
 - Add graceful `SIGTERM` handling alongside `SIGINT`; Docker stop sends
   `SIGTERM` to the container's main process.
 - Add a multi-stage `Dockerfile` and `.dockerignore`. Build and test in the
@@ -68,11 +79,8 @@ and systemd shutdown is clean.
 
 **Done when:** the image builds for the selected target architecture, runs
 with the documented config and non-root identity, passes diagnostic and
-shutdown checks, and its UDP/networking behavior is recorded.
-
-The x86_64 CI runner verifies the `amd64` image. Raspberry Pi `arm64` and LAN
-broadcast checks remain target-hardware validation and must not be reported
-as complete based on the CI run.
+shutdown checks, and its UDP/networking behavior is recorded. Those criteria
+are met for `amd64`, with the hardware follow-ups above still open.
 
 ### M10.3 CI build issue: GCC 12 vector warnings
 
@@ -117,6 +125,6 @@ paths and distinguish verified results from hardware-dependent checks.
 
 ## Completion criteria
 
-- The M10.2, M10.3, and M10.4 done criteria are met and their results are
-  documented. Hardware-dependent results are not claimed until verified on
-  the target.
+- M10.3 is done for `amd64`. Raspberry Pi `arm64` and target-hardware LAN
+  broadcast checks remain follow-ups. M10.2 and M10.4 are still open.
+  Hardware-dependent results are not claimed until verified on the target.
